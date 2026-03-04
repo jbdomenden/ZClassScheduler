@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZClassScheduler</title>
+
+    <!-- Shared/base styles used across pages -->
+    <link rel="stylesheet" href="../CSS/base.css" />
+    <!-- Page-specific styles for CRUD layout and modal -->
+    <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+</head>
+
+<body>
+<!-- Global header populated dynamically (see load-global.js) -->
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <!-- Global sidebar navigation populated dynamically (see load-global.js) -->
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <!-- CRUD scope: container used by page styles/scripts to standardize CRUD UI -->
+    <main class="crud-scope">
+        <div class="page-header">
+            <h2>Course Management</h2>
+            <p class="subtitle">Define available courses and their course codes</p>
+        </div>
+
+        <!-- Main panel: search + actions + table -->
+        <section class="panel">
+            <div class="panel-header">
+                <!-- Search UI is injected dynamically (typically by ManageCourse.js) -->
+                <div id="searchContainer"></div>
+
+                <!-- Primary action: open modal to add a course -->
+                <button id="addCourseBtn" class="btn btn-primary">+ Add Course</button>
+            </div>
+
+            <!-- Table wrapper enables scrolling/responsive behavior -->
+            <div class="table-wrapper">
+                <table id="courseTable">
+                    <thead>
+                    <tr>
+                        <th data-key="code">Course Code</th>
+                        <th data-key="name">Course Name</th>
+                        <th data-key="levelType">Level</th>
+                        <th data-key="active">Status</th>
+                        <th width="200">Actions</th>
+                    </tr>
+                    </thead>
+
+                    <!-- IMPORTANT: Rows are rendered dynamically via ManageCourse.js -->
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Course modal (hidden by default; visibility controlled by ManageCourse.js) -->
+<!-- IMPORTANT: "hidden" class is used to toggle visibility without removing from DOM -->
+<div id="courseModal" class="modal hidden">
+    <div class="modal-content">
+        <!-- Modal title updates depending on create/edit mode -->
+        <h3 id="modalTitle">Add Course</h3>
+
+        <!-- Form used for both add and edit actions -->
+        <form id="courseForm" class="crud-scope">
+            <label>Course Code</label>
+            <input type="text" id="courseCode" required placeholder="e.g. BSCS" />
+
+            <label>Course Name</label>
+            <input
+                    type="text"
+                    id="courseName"
+                    required
+                    placeholder="e.g. Bachelor of Science in Computer Science"
+            />
+
+            <label>Level</label>
+            <select id="levelType" required>
+                <option value="" disabled selected>Select Level</option>
+                <option value="TERTIARY">Tertiary</option>
+                <option value="SHS">Senior High School</option>
+                <option value="JHS">Junior High School</option>
+            </select>
+
+            <label>Status</label>
+            <select id="status">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+            </select>
+
+            <!-- Modal actions: submit saves; cancel closes without saving -->
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" id="cancelBtn" class="btn btn-secondary">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Loads shared header/sidebar content into #global-header and #global-nav -->
+<script src="../JS/load-global.js"></script>
+
+<!-- Page module: course CRUD logic, table rendering, modal control -->
+<script type="module" src="../JS/ManageCourse.js"></script>
+</body>
+</html>

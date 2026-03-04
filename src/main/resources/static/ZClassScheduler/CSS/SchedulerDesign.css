@@ -1,0 +1,39 @@
+/* ================= MODAL / ACTIONS ================= */
+.modal-lg{max-width:920px;}
+.panel-actions{display:flex;gap:10px;align-items:center;}
+
+/* ================= FORM ================= */
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:12px;}
+.form-field label{display:block;margin-bottom:6px;}
+.hint{font-size:12px;opacity:.85;padding:10px;border:1px dashed var(--border);border-radius:10px;margin:10px 0 14px;background:rgba(0,0,0,.02);}
+
+/* ================= DETAIL CONTAINER ================= */
+.block-detail{background:rgba(0,0,0,.02);}
+.nested-wrap{padding:12px;}
+.nested-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.nested-title h4{margin:0;}
+
+/* ================= GENERATED SCHEDULE TABLE ================= */
+.gen-table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;}
+.gen-table thead th{background:#f8fafc;padding:12px 10px;font-weight:700;font-size:12px;border:1px solid var(--border);text-transform:uppercase;text-align:center;color:var(--text-muted);}
+.gen-table tbody td{background:#ffffff;padding:12px 10px;font-size:13px;border:1px solid var(--border);text-align:center;vertical-align:middle;}
+.gen-table td.desc{text-align:center;}
+
+/* ================= SECTION CELL ================= */
+.section-cell{font-weight:700;line-height:1.2;}
+.section-cell .sec{display:block;font-size:14px;}
+.section-cell .curr{display:block;font-size:12px;font-weight:600;margin-top:8px;color:var(--text-muted);}
+
+/* ================= BUTTON (REFACTORED TO GLOBAL SYSTEM) ================= */
+.btn-edit-blue{background:var(--primary,#2563eb);color:#fff;border:none;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;}
+.btn-edit-blue:hover{opacity:.9;}
+
+/* ================= ELECTIVE SELECT ================= */
+.elective-select{width:100%;max-width:380px;}
+
+/* ================= ADD ROW (HOVER ON BOTTOM BORDER) ================= */
+/* Show a floating + button sitting on the bottom border of the subject head row */
+.gen-table tr.subject-head{ position: relative; }
+.gen-table tr.subject-head .add-row-handle{position: absolute;left: 50%;bottom: -1px;transform: translate(-50%, 50%);width: 22px;height: 22px;border-radius: 999px;background: #2563eb;color: #fff;display: none;align-items: center;justify-content: center;font-weight: 800;line-height: 1;cursor: pointer;box-shadow: 0 6px 18px rgba(0,0,0,.25);user-select: none;z-index: 2;}
+.gen-table tr.subject-head:hover .add-row-handle{ display: inline-flex; }
+.gen-table tr.subject-head .add-row-handle:hover{ filter: brightness(1.08); }

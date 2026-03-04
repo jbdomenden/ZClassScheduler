@@ -1,0 +1,10 @@
+PUT http://127.0.0.1:8080/api/settings/rooms/{id}
+Content-Type: application/json
+
+{
+  "code": "501",
+  "floor": "5th",
+  "capacity": 45,
+  "type": "Regular",
+  "status": "Active"
+}

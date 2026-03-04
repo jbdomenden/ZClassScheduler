@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>ZClassScheduler</title>
+
+    <!-- Page-specific styles (dashboard) -->
+    <link rel="stylesheet" href="../CSS/Dashboard.css" />
+    <!-- Shared/base styles used across pages -->
+    <link rel="stylesheet" href="../CSS/base.css" />
+</head>
+
+<body>
+<!-- Global header populated dynamically (see load-global.js) -->
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <!-- Global sidebar navigation populated dynamically (see load-global.js / GlobalSidebar.js) -->
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <main>
+        <!-- Page title + short context -->
+        <div class="page-header">
+            <h2>Dashboard</h2>
+            <p class="subtitle">Live overview of scheduling efficiency</p>
+        </div>
+
+        <!-- High-level KPIs (static placeholders here; can be made dynamic later) -->
+        <section class="kpi-grid">
+            <div class="kpi-card"><span>Total Schedules</span><strong>148</strong></div>
+            <div class="kpi-card"><span>Active Teachers</span><strong>42</strong></div>
+            <div class="kpi-card"><span>Rooms Used</span><strong>18</strong></div>
+            <div class="kpi-card"><span>Overall Utilization</span><strong>75%</strong></div>
+        </section>
+
+        <!-- Main dashboard content panels -->
+        <section class="content-grid">
+            <!-- Room-by-time overview panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Room Overview</h3>
+                </div>
+
+                <div class="room-grid">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th class="time-col" colspan="2">Time</th>
+                            <th>Lab 1</th>
+                            <th>Lab 2</th>
+                            <th>Lab 3</th>
+                            <th>Lab 4</th>
+                            <th>Lab 5</th>
+                            <th>Room 204</th>
+                        </tr>
+                        </thead>
+
+                        <!-- IMPORTANT: roomGrid is populated dynamically by Dashboard.js -->
+                        <tbody id="roomGrid"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Aggregate room utilization panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Room Utilization</h3>
+                </div>
+
+                <table>
+                    <!-- Overall utilization row -->
+                    <tr class="overall-row">
+                        <td>Overall</td>
+                        <td>18 / 24</td>
+                        <td>75%</td>
+                        <td>
+                            <div class="util-bar">
+                                <div class="util-fill medium" style="width: 75%"></div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Per-room breakdown -->
+                    <tr>
+                        <td>Lab 1</td>
+                        <td>6 / 8</td>
+                        <td>75%</td>
+                        <td>
+                            <div class="util-bar">
+                                <div class="util-fill medium" style="width: 75%"></div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Lab 3</td>
+                        <td>8 / 8</td>
+                        <td>100%</td>
+                        <td>
+                            <div class="util-bar">
+                                <div class="util-fill high" style="width: 100%"></div>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Room 204</td>
+                        <td>4 / 8</td>
+                        <td>50%</td>
+                        <td>
+                            <div class="util-bar">
+                                <div class="util-fill low" style="width: 50%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Incomplete schedules panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Incomplete Schedules</h3>
+                </div>
+
+                <table class="incomplete-table">
+                    <thead>
+                    <tr>
+                        <th>Section</th>
+                        <th>Subject</th>
+                        <th>Missing</th>
+                    </tr>
+                    </thead>
+                    <tbody id="incompleteGrid">
+                    <tr>
+                        <td colspan="3" class="muted">Loading…</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Conflicts panel -->
+            <!-- NOTE: Currently static examples; can be generated dynamically once data source exists -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Conflicts Detected</h3>
+                </div>
+
+                <div class="conflict">
+                    <strong>Room Conflict</strong><br />
+                    08:00–09:30 • Lab 3<br />
+                    BSIT 2A overlaps with BSMT 3
+                </div>
+
+                <div class="conflict">
+                    <strong>Teacher Conflict</strong><br />
+                    10:00–11:30 • Room 204<br />
+                    Prof. Reyes assigned to 2 classes
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Page logic for dashboard (e.g., roomGrid population) -->
+<script src="../JS/Dashboard.js"></script>
+
+<!-- Loads shared header/sidebar content into #global-header and #global-nav -->
+<script src="../JS/load-global.js"></script>
+
+<!-- Navigation interactions (e.g., sidebar toggle, logout) -->
+<script src="../JS/GlobalSidebar.js"></script>
+</body>
+</html>

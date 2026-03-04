@@ -1,0 +1,70 @@
+/* ================= ROOT VARIABLES ================= */
+:root{
+    --bg-main:#f1f5f9;
+    --bg-dark:#020617;
+    --bg-card:#ffffff;
+    --text-muted:#94a3b8;
+    --border:#e5e7eb;
+    --slot:#e5e7eb;
+
+    /* Semantic colors */
+    --good:#16a34a;   /* HIGH utilization */
+    --warn:#f59e0b;   /* MEDIUM */
+    --bad:#dc2626;    /* LOW utilization */
+}
+
+/* ================= BASE ================= */
+*{box-sizing:border-box;font-family:Inter,Arial,sans-serif;}
+body{margin:0;background:var(--bg-main);color:#0f172a;}
+
+/* ================= HEADER ================= */
+.page-header h2{margin:0;font-size:22px;}
+.subtitle{font-size:13px;color:var(--text-muted);}
+
+/* ================= KPI CARDS ================= */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:20px 0;}
+.kpi-card{background:#fff;border:2px solid rgba(78,78,78,.55);border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.kpi-card span{font-size:12px;color:#64748b;}
+.kpi-card strong{display:block;margin-top:6px;font-size:30px;}
+
+/* ================= CONTENT GRID ================= */
+.content-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;}
+
+/* ================= PANEL ================= */
+.panel{background:#fff;border:1px solid rgba(140,140,140,.55);border-radius:12px;padding:10px;box-shadow:0 2px 6px rgba(0,0,0,.04);overflow:hidden;}
+.panel-header{padding:14px 16px;border-bottom:1px solid var(--border);}
+.panel-header h3{margin:0;font-size:15px;}
+
+/* ================= TABLE ================= */
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th,td{padding:12px 14px;border-bottom:1px solid var(--border);}
+th{font-size:12px;text-transform:uppercase;color:var(--text-muted);background:#f8fafc;}
+
+/* ================= UTILIZATION ================= */
+.util-bar{height:8px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:6px;}
+.util-fill{height:100%;border-radius:999px;}
+.high{background:var(--good);}
+.medium{background:var(--warn);}
+.low{background:var(--bad);}
+.overall-row{background:#f1f5f9;font-weight:700;}
+
+/* ================= CONFLICT LIST ================= */
+.conflict{padding:12px 16px;border-left:4px solid var(--bad);background:#fff5f5;font-size:13px;}
+.conflict strong{color:var(--bad);}
+.conflict:not(:last-child){border-bottom:1px solid var(--border);}
+
+/* ================= INCOMPLETE ================= */
+.muted{color:var(--text-muted);}
+.incomplete-table td{text-align:left;}
+.missing-badges{display:flex;flex-wrap:wrap;gap:6px;}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--border);background:#f8fafc;color:#0f172a;}
+.badge.bad{background:#fff5f5;border-color:rgba(220,38,38,.25);color:var(--bad);}
+
+/* ================= ROOM GRID ================= */
+.room-grid{overflow:auto;max-height:520px;}
+.time-col{width:90px;background:#f8fafc;font-weight:600;}
+
+/* ================= SLOT ================= */
+.slot{background:rgba(37,99,235,.15);border-left:4px solid var(--slot);height:100%;padding:1px;font-size:11px;}
+.slot.start{border-top-left-radius:6px;border-top-right-radius:6px;}
+.slot.end{border-bottom-left-radius:6px;border-bottom-right-radius:6px;}

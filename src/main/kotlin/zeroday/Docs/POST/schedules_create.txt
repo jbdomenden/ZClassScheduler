@@ -1,0 +1,15 @@
+POST http://127.0.0.1:8080/schedules/all
+Authorization: Bearer {jwt-token}
+Content-Type: application/json
+
+{
+  "courseCode": "BI",
+  "sectionName": "BI11",
+  "subjectCode": "CITE1004",
+  "subjectName": "Introduction to Computing",
+  "dayOfWeek": "MONDAY",
+  "timeStart": "07:00",
+  "timeEnd": "09:00",
+  "roomId": "00000000-0000-0000-0000-000000000000",
+  "teacherId": "00000000-0000-0000-0000-000000000000"
+}

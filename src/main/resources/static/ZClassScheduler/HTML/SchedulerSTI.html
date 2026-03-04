@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZClassScheduler</title>
+
+    <link rel="stylesheet" href="../CSS/base.css" />
+    <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+    <link rel="stylesheet" href="../CSS/SchedulerDesign.css" />
+</head>
+
+<body>
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <main class="crud-scope">
+
+        <div class="page-header">
+            <h2>Tertiary Schedule</h2>
+            <p class="subtitle">Create section blocks, assign schedules, and manage electives</p>
+        </div>
+
+        <section class="panel">
+
+            <div class="panel-header">
+                <div id="searchContainer"></div>
+
+                <div class="panel-actions">
+                    <button id="addBlockBtn" class="btn btn-primary">+ Add Schedule</button>
+                    <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="blocksTable">
+                    <thead>
+                    <tr>
+                        <th>Section</th>
+                        <th>Program</th>
+                        <th>Year</th>
+                        <th>Term</th>
+                        <th>Status</th>
+                        <th width="210">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+        </section>
+
+    </main>
+</div>
+
+<!-- Wizard Modal -->
+<div id="wizardModal" class="modal hidden">
+    <div class="modal-content modal-lg">
+        <h3 id="wizardTitle">Create Schedule Block</h3>
+
+        <form id="wizardForm" class="crud-scope">
+            <div class="form-grid">
+
+                <div class="form-field">
+                    <label>Program / Course</label>
+                    <select id="programSelect" required>
+                        <option value="" disabled selected>Select Program</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Curriculum</label>
+                    <select id="curriculumSelect" required>
+                        <option value="" disabled selected>Select Curriculum</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Year</label>
+                    <select id="yearSelect" required>
+                        <option value="" disabled selected>Select Year</option>
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3">3rd Year</option>
+                        <option value="4">4th Year</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Term</label>
+                    <select id="termSelect" required>
+                        <option value="" disabled selected>Select Term</option>
+                        <option value="1">1st Term</option>
+                        <option value="2">2nd Term</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="hint">
+                Section will auto-generate as: <b>{COURSE}{LEVEL}{COUNT}</b> (Example: <b>BI101</b>)
+            </div>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Create</button>
+                <button type="button" id="wizardCancelBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Row Modal -->
+<div id="editRowModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 id="editRowTitle">Edit Schedule</h3>
+
+        <form id="editRowForm" class="crud-scope">
+            <input type="hidden" id="editScheduleId" />
+
+            <label>Day</label>
+            <select id="editDay">
+                <option value="">(Unset)</option>
+                <option value="MONDAY">MONDAY</option>
+                <option value="TUESDAY">TUESDAY</option>
+                <option value="WEDNESDAY">WEDNESDAY</option>
+                <option value="THURSDAY">THURSDAY</option>
+                <option value="FRIDAY">FRIDAY</option>
+                <option value="SATURDAY">SATURDAY</option>
+            </select>
+
+            <label>Time Start</label>
+            <input id="editStart" type="time" />
+
+            <label>Time End</label>
+            <input id="editEnd" type="time" />
+
+            <label>Room</label>
+            <select id="editRoom">
+                <option value="">(Unset)</option>
+            </select>
+
+            <label>Instructor</label>
+            <select id="editTeacher">
+                <option value="">(Unset)</option>
+            </select>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" id="editCancelBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../JS/load-global.js"></script>
+<script type="module" src="../JS/SchedulerSTI.js"></script>
+</body>
+</html>

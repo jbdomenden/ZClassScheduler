@@ -1,0 +1,11 @@
+/* ================= SCHEDULE GRID WRAPPER ================= */
+.schedule-grid{overflow:auto;max-height:600px;border:1px solid var(--border);}
+
+/* ================= PAGE HEADER ================= */
+.page-title{margin-bottom:5px;}
+.subtitle{font-size:13px;color:#64748b;}
+
+/* ================= TABLE OVERRIDES (TEACHER) ================= */
+.schedule-table{width:100%;}
+.schedule-table td.lecture, .schedule-table td.lab, .schedule-table td.admin, .schedule-table td.break,
+.schedule-table td.special {text-align:center;vertical-align:middle;font-weight:600;}

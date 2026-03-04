@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ZClassScheduler</title>
+
+    <!-- Core Layout -->
+    <link rel="stylesheet" href="../CSS/base.css">
+
+    <!-- Grid + Table Styling -->
+    <link rel="stylesheet" href="../CSS/ScheduleGrid.css">
+    <link rel="stylesheet" href="../CSS/ScheduleList.css">
+
+    <!-- Page Specific -->
+    <link rel="stylesheet" href="../CSS/SchedulesOverview.css">
+</head>
+
+<body>
+
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+
+    <!-- Sidebar -->
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <main>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h2>All Schedules</h2>
+            <p class="subtitle">Section-based master schedule</p>
+        </div>
+
+        <!-- Master Schedule Panel -->
+        <section class="panel">
+
+            <div class="panel-header">
+                <h3>Curriculum Schedules</h3>
+
+                <!-- Search Component (Loaded from GlobalSearch.html) -->
+                <div id="searchContainer"></div>
+            </div>
+
+            <!-- Schedule Table -->
+            <div class="schedule-table">
+                    <table id="scheduleTable">
+                        <thead>
+                        <tr>
+                            <th>SECTION</th>
+                            <th>COURSE CODE</th>
+                            <th>COURSE DESCRIPTION</th>
+                            <th>DAY</th>
+                            <th COLSPAN="2">TIME</th>
+                            <th>ROOM</th>
+                            <th>INSTRUCTOR</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        <!-- Rendered dynamically by ScheduleListEngine -->
+                        </tbody>
+                    </table>
+                </div>
+        </section>
+
+    </main>
+
+</div>
+
+<!-- Global Layout Loader -->
+<script src="../JS/load-global.js"></script>
+<script src="../JS/GlobalSidebar.js"></script>
+
+
+<!-- Overview Controller (imports ScheduleListEngine + DB) -->
+<script type="module" src="../JS/SchedulesOverview.js"></script>
+
+</body>
+</html>

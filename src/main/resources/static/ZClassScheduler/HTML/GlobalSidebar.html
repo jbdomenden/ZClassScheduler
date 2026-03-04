@@ -1,0 +1,44 @@
+<!-- Shared base styles (ensures sidebar/nav styling consistency) -->
+<link rel="stylesheet" href="../CSS/base.css" />
+
+<!-- Main sidebar navigation -->
+<!-- IMPORTANT: Visibility of some links is controlled via data-role + load-global.js -->
+<nav>
+    <!-- Dashboard section -->
+    <h3>Dashboard</h3>
+    <a href="Dashboard.html">Overview</a>
+
+    <!-- Schedules section -->
+    <h3>Schedules</h3>
+
+    <!-- Collapsible: All schedules grouped by perspective -->
+    <details>
+        <summary>All Schedules</summary>
+        <a href="SchedulesOverview.html">Overview</a>
+        <a href="SchedulesRoom.html">By Room</a>
+        <a href="SchedulesTeacher.html">By Teacher</a>
+        <a href="SchedulesSection.html">By Section</a>
+    </details>
+
+    <!-- Collapsible: Tertiary departments -->
+    <details>
+        <summary>Tertiary Department</summary>
+        <a href="SchedulerSTI.html">STI Tertiary</a>
+        <a href="SchedulerNAMEI.html">NAMEI Tertiary</a>
+    </details>
+
+    <!-- Collapsible: High school departments -->
+    <details>
+        <summary>High School Department</summary>
+        <a href="SchedulerJHS.html">Junior High School</a>
+        <a href="SchedulerSHS.html">Senior High School</a>
+    </details>
+
+    <!-- Settings section (role-restricted via data-role) -->
+    <h3 data-role="ADMIN,SUPER_ADMIN">Settings</h3>
+
+    <a data-role="ADMIN,SUPER_ADMIN" href="ManageRoom.html">Manage Rooms</a>
+    <a data-role="ADMIN,SUPER_ADMIN" href="ManageTeacher.html">Manage Teachers</a>
+    <a data-role="SUPER_ADMIN" href="ManageCurriculum.html">Manage Curriculum</a>
+    <a data-role="SUPER_ADMIN" href="ManageCourse.html">Manage Courses</a>
+</nav>

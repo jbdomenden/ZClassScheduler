@@ -1,0 +1,12 @@
+POST http://127.0.0.1:8080/api/settings/curriculums/upload
+Content-Type: application/json
+
+{
+  "courseCode": "BI",
+  "name": "BSIT-24-01",
+  "dept": "TERTIARY_STI",
+  "subjects": [
+    { "code": "CITE1004", "name": "Introduction to Computing", "yearTerm": "1" },
+    { "code": "CITE1003", "name": "Computer Programming 1", "yearTerm": "1" }
+  ]
+}

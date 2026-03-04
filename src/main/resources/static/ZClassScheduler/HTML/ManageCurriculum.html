@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ZClassScheduler</title>
+
+    <!-- Shared/base styles used across pages -->
+    <link rel="stylesheet" href="../CSS/base.css" />
+    <!-- Page-specific styles for CRUD layout + modal UI -->
+    <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+</head>
+<!-- Parse/Upload Progress Overlay -->
+<div id="parseProgressOverlay" class="parse-progress-overlay">
+    <div class="parse-progress-card">
+        <div class="parse-progress-title" id="parseProgressTitle">Parsing Curriculum PDF...</div>
+        <div class="parse-progress-sub" id="parseProgressSub">Preparing...</div>
+
+        <div class="parse-progress-bar">
+            <div class="parse-progress-fill" id="parseProgressFill"></div>
+        </div>
+
+        <div class="parse-progress-percent" id="parseProgressPercent">0%</div>
+
+        <!-- NEW: OK button (hidden until success/error) -->
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:12px;">
+            <button type="button" id="parseProgressOkBtn" class="btn btn-primary" style="display:none;">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+<body>
+<!-- Global header populated dynamically (see load-global.js) -->
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <!-- Global sidebar navigation populated dynamically (see load-global.js) -->
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <main class="crud-scope">
+        <div class="page-header">
+            <h2>Curriculum Management</h2>
+            <p class="subtitle">Manage and activate curriculum versions</p>
+        </div>
+
+        <!-- Main panel: search + actions + curriculum list table -->
+        <section class="panel">
+            <div class="panel-header">
+                <!-- Search UI is injected dynamically (typically by ManageCurriculum.js) -->
+                <div id="searchContainer"></div>
+
+                <div class="panel-actions">
+                    <!-- Primary action: open upload modal -->
+                    <button id="uploadBtn" class="btn btn-primary">Upload Curriculum</button>
+                    <!-- Delete-mode toggle (behavior handled in ManageCurriculum.js) -->
+                    <button id="deleteModeBtn" class="btn btn-delete">Delete Curriculum</button>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="curriculumListTable">
+                    <thead>
+                    <tr>
+                        <th data-key="curriculumCode">Curriculum Code</th>
+                        <th data-key="program">Program</th>
+                        <th data-key="dept">Department</th>
+                        <th data-key="isActive">Status</th>
+                        <th width="220">Actions</th>
+                    </tr>
+                    </thead>
+
+                    <!-- IMPORTANT: Rows are rendered dynamically via ManageCurriculum.js -->
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- Upload Curriculum Modal -->
+<!-- IMPORTANT: "hidden" class controls visibility; modal stays in DOM for quick toggling -->
+<div id="uploadModal" class="modal hidden">
+    <div class="modal-content modal-lg">
+        <h3>Upload Curriculum</h3>
+
+        <!-- Upload form: submits PDF + metadata; PDF parsing is client-side -->
+        <form id="uploadForm" class="crud-scope">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Curriculum PDF</label>
+                    <!-- IMPORTANT: accept limits file picker to PDFs (does not guarantee file validity) -->
+                    <input type="file" id="pdfInput" accept="application/pdf" required />
+                </div>
+
+                <div class="form-field">
+                    <label>Curriculum Code</label>
+                    <input
+                            type="text"
+                            id="curriculumCode"
+                            placeholder="e.g. BSCS-24-01"
+                            required
+                    />
+                </div>
+
+                <div class="form-field">
+                    <label>Department</label>
+                    <select id="deptSelect" required>
+                        <option value="" disabled selected>Select Department</option>
+                        <option value="TERTIARY_STI">Tertiary STI</option>
+                        <option value="TERTIARY_NAMEI">Tertiary NAMEI</option>
+                        <option value="JHS">Junior High School</option>
+                        <option value="SHS">Senior High School</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Program (auto from PDF)</label>
+                    <!-- Program name is auto-filled after PDF parsing -->
+                    <input type="text" id="programPreview" placeholder="Auto-detected" readonly />
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Upload</button>
+                <button type="button" id="closeUploadModal" class="btn btn-secondary">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Loads shared header/sidebar content into #global-header and #global-nav -->
+<script src="../JS/load-global.js"></script>
+
+<!-- PDF.js (client-side PDF parsing for program auto-detection) -->
+<!-- IMPORTANT: External dependency loaded via CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="../JS/ParserSTI.js"></script>
+<script src="../JS/ParserNAMEI.js"></script>
+<script src="../JS/ParserJHS.js"></script>
+<script src="../JS/ParserSHS.js"></script>
+<!-- Page module: curriculum upload/listing/activation/delete-mode logic -->
+<script type="module" src="../JS/ManageCurriculum.js"></script>
+</body>
+</html>

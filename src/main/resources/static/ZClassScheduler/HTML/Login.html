@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>ZClassScheduler</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Login page styles (kept external to maintain separation of concerns) -->
+    <link rel="stylesheet" href="../CSS/Login.css" />
+</head>
+<body>
+<!-- Splash screen shown on initial page load (hidden by Login.js once ready) -->
+<div id="splashScreen" class="overlay overlay--visible" aria-label="Loading">
+    <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlay-title">ZeroDay Scheduling</div>
+        <div class="overlay-sub">Loading…</div>
+    </div>
+</div>
+
+<!-- Sign-in overlay shown during form submission to prevent double actions -->
+<!-- IMPORTANT: Starts hidden via aria-hidden; Login.js controls visibility -->
+<div id="loginLoading" class="overlay" aria-label="Signing in" aria-hidden="true">
+    <div class="overlay-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="overlay-title">Signing in…</div>
+        <div class="overlay-sub">Please wait</div>
+    </div>
+</div>
+
+<!-- Main login UI -->
+<div class="login-card">
+    <h2>ZeroDay Scheduling</h2>
+
+    <!-- IMPORTANT: Form submission is handled by ../JS/Login.js (preventDefault + async) -->
+    <form id="loginForm">
+        <!-- Email input (HTML validation via type="email" + required) -->
+        <input type="email" id="email" placeholder="Microsoft Email" required />
+
+        <!-- Password input (required; actual auth handled in Login.js) -->
+        <input type="password" id="password" placeholder="Password" required />
+
+        <!-- Remember-me option (read/used by Login.js if implemented there) -->
+        <label class="remember-me">
+            <input type="checkbox" id="rememberMe" />
+            <span>Remember me</span>
+        </label>
+
+        <!-- Submit triggers Login.js handler -->
+        <button type="submit">Login</button>
+
+        <!-- Auxiliary actions -->
+        <div class="options">
+            <!-- NOTE: Placeholder link; wire to recovery flow when available -->
+            <a href="#">Forgot password?</a>
+        </div>
+    </form>
+</div>
+
+<!-- Page behavior and login flow logic -->
+<script src="../JS/Login.js"></script>
+</body>
+</html>

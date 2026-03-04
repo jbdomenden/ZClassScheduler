@@ -1,0 +1,13 @@
+POST http://127.0.0.1:8080/api/settings/teachers
+Content-Type: application/json
+
+{
+  "empId": "EMP-0001",
+  "firstName": "Juan",
+  "lastName": "Dela Cruz",
+  "department": "ICT",
+  "email": "juan.delacruz@zcs.edu",
+  "password": "P@ssw0rd!",
+  "role": "Teacher",
+  "status": "Active"
+}

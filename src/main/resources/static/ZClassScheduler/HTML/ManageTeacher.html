@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZClassScheduler</title>
+
+  <!-- Shared/base styles used across pages -->
+  <link rel="stylesheet" href="../CSS/base.css" />
+  <!-- Page-specific styles for CRUD layout + modal UI -->
+  <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+</head>
+
+<body>
+<!-- Global header populated dynamically (see load-global.js) -->
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+  <!-- Global sidebar navigation populated dynamically (see load-global.js / GlobalSidebar.js) -->
+  <aside id="global-nav" class="sidebar"></aside>
+
+  <main class="crud-scope">
+    <div class="page-header">
+      <h2>Teacher Management</h2>
+      <p class="subtitle">Create, update, and manage teacher records</p>
+    </div>
+
+    <!-- Main panel: search + action button + teacher list table -->
+    <section class="panel">
+      <div class="panel-header">
+        <!-- Search UI is injected dynamically (typically by ManageTeacher.js) -->
+        <div id="searchContainer"></div>
+
+        <!-- Primary action: open modal to add a teacher -->
+        <button id="addTeacherBtn" class="btn btn-primary">+ Add Teacher</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table id="teacherTable">
+          <thead>
+          <tr>
+            <th data-key="empId">Employee ID</th>
+            <th data-key="firstName">First Name</th>
+            <th data-key="lastName">Last Name</th>
+            <th data-key="department">Department</th>
+            <th data-key="email">Email</th>
+            <th>Password</th>
+            <th data-key="role">Role</th>
+            <th data-key="status">Status</th>
+            <th width="150">Actions</th>
+          </tr>
+          </thead>
+
+          <!-- IMPORTANT: Rows are rendered dynamically via ManageTeacher.js -->
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Teacher modal (hidden by default; visibility controlled by ManageTeacher.js) -->
+<!-- IMPORTANT: "hidden" class toggles display without removing the modal from the DOM -->
+<div id="teacherModal" class="modal hidden">
+  <div class="modal-content">
+    <!-- Modal title updates depending on create/edit mode -->
+    <h3 id="modalTitle">Add Teacher</h3>
+
+    <!-- Teacher form: used for both add and edit flows -->
+    <form id="teacherForm">
+      <label>Employee ID</label>
+      <input type="text" id="empId" required />
+
+      <label>Employee Firstname</label>
+      <input type="text" id="empFn" required />
+
+      <label>Employee Lastname</label>
+      <input type="text" id="empLn" required />
+
+      <label>Department</label>
+      <!-- NOTE: id="type" is used by existing JS; kept unchanged -->
+      <select id="type" required>
+        <option value="" disabled selected>Select Department</option>
+        <option value="ICT">Information and Communications Technology</option>
+        <option value="THM">Tourism and Hospitality Management</option>
+        <option value="BM">Business Management</option>
+        <option value="GE">General Education</option>
+        <option value="ME">Maritime Engineering</option>
+        <option value="MT">Maritime Transportation</option>
+        <option value="NA">Naval Architecture and Marine Engineering</option>
+        <option value="HS">High School</option>
+      </select>
+
+      <label>Email</label>
+      <input type="email" id="email" required />
+
+      <label>Default Password</label>
+      <input type="password" id="password" required />
+
+      <label>Role</label>
+      <select id="role" required>
+        <option value="" disabled selected>Select Role</option>
+        <option value="Teacher">Teacher</option>
+        <option value="Admin">Admin</option>
+      </select>
+
+      <label>Status</label>
+      <select id="status">
+        <option value="Active">Active</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+
+      <!-- Modal actions: submit saves; cancel closes without saving -->
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" id="cancelBtn" class="btn btn-secondary">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Loads shared header/sidebar content into #global-header and #global-nav -->
+<script src="../JS/load-global.js"></script>
+
+<!-- Navigation interactions (e.g., sidebar toggle, logout) -->
+<script src="../JS/GlobalSidebar.js"></script>
+
+<!-- Page module: teacher CRUD logic, table rendering, modal control -->
+<script type="module" src="../JS/ManageTeacher.js"></script>
+</body>
+</html>

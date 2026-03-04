@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZClassScheduler - JHS Schedule</title>
+
+    <!-- Global / shared styles -->
+    <link rel="stylesheet" href="../CSS/Dashboard.css" />
+    <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+
+    <!-- Scheduler theme (IMPORTANT) -->
+    <link rel="stylesheet" href="../CSS/SchedulerDesign.css" />
+
+    <!-- Small JHS-only additions (safe with scheduler.css) -->
+    <style>
+        /* Hover bottom-border + centered "+" handle like STI tertiary */
+        tr.subject-head { position: relative; }
+        tr.subject-head .add-row-handle{
+          position:absolute;
+          left:50%;
+          bottom:-14px;
+          transform:translateX(-50%);
+          width:26px;
+          height:26px;
+          border-radius:999px;
+          display:none;
+          align-items:center;
+          justify-content:center;
+          font-weight:800;
+          cursor:pointer;
+          z-index:10;
+          box-shadow:0 6px 18px rgba(0,0,0,.25);
+        }
+        tr.subject-head:hover .add-row-handle{ display:inline-flex; }
+    </style>
+</head>
+
+<body>
+<!-- Global header injected by load-global.js -->
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <!-- Global sidebar injected by GlobalSidebar.js -->
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <main class="crud-scope">
+
+        <!-- Page title block (same feel as STI) -->
+        <div class="page-header">
+            <h2>JHS Schedule</h2>
+            <p class="subtitle">Create blocks and assign schedules (Grade 7–10)</p>
+        </div>
+
+        <!-- Controls row (same feel as STI) -->
+        <div class="panel-header" style="display:flex;gap:12px;align-items:center;justify-content:space-between;">
+            <div class="search-wrapper" style="max-width:320px;width:100%;">
+                <input id="searchInput" class="search-input" placeholder="Search..." />
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;">
+                <button id="openWizardBtn" class="btn btn-primary">+ Add Schedule</button>
+                <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+            </div>
+        </div>
+
+        <!-- Blocks table -->
+        <div class="table-wrapper">
+            <table id="blocksTable">
+                <thead>
+                <tr>
+                    <th>SECTION</th>
+                    <th>PROGRAM</th>
+                    <th>GRADE</th>
+                    <th>STATUS</th>
+                    <th width="220">ACTIONS</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- JS renders rows -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- =========================
+             CREATE BLOCK MODAL (Wizard)
+             ========================= -->
+        <div id="wizardModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Create Schedule Block</h3>
+
+                <form id="wizardForm">
+                    <label>Program</label>
+                    <select id="programSelect" required>
+                        <option value="">Select program...</option>
+                    </select>
+
+                    <label>Curriculum</label>
+                    <select id="curriculumSelect" required>
+                        <option value="">Select curriculum...</option>
+                    </select>
+
+                    <label>Grade</label>
+                    <select id="gradeSelect" required>
+                        <option value="">Select grade...</option>
+                        <option value="7">Grade 7</option>
+                        <option value="8">Grade 8</option>
+                        <option value="9">Grade 9</option>
+                        <option value="10">Grade 10</option>
+                    </select>
+
+                    <label>Section Name</label>
+                    <!-- keep your JS id the same; if your JS uses sectionCodeInput, keep it -->
+                    <input
+                            id="sectionCodeInput"
+                            type="text"
+                            placeholder="e.g., Diamond"
+                            required
+                    />
+
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Create</button>
+                        <button type="button" id="wizardCancelBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- =========================
+             EDIT ROW MODAL
+             ========================= -->
+        <div id="editRowModal" class="modal hidden">
+            <div class="modal-content">
+                <h3>Edit Schedule</h3>
+
+                <div id="editRowMeta" style="margin:-6px 0 10px;font-size:12px;opacity:.85;"></div>
+
+                <form id="editRowForm">
+                    <input type="hidden" id="editScheduleId"/>
+
+                    <label>Day</label>
+                    <select id="editDay">
+                        <option value="">(Unset)</option>
+                        <option value="MONDAY">MONDAY</option>
+                        <option value="TUESDAY">TUESDAY</option>
+                        <option value="WEDNESDAY">WEDNESDAY</option>
+                        <option value="THURSDAY">THURSDAY</option>
+                        <option value="FRIDAY">FRIDAY</option>
+                        <option value="SATURDAY">SATURDAY</option>
+                    </select>
+
+                    <label>Time Start</label>
+                    <input id="editStart" type="time"/>
+
+                    <label>Time End</label>
+                    <input id="editEnd" type="time"/>
+
+                    <label>Room</label>
+                    <select id="editRoom">
+                        <option value="">(Unset)</option>
+                    </select>
+
+                    <label>Instructor</label>
+                    <select id="editInstructor">
+                        <option value="">(Unset)</option>
+                    </select>
+
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                        <button type="button" id="editCancelBtn" class="btn btn-secondary">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- Global injectors -->
+<script src="../JS/load-global.js"></script>
+<script src="../JS/GlobalSidebar.js"></script>
+
+<!-- Page JS -->
+<script type="module" src="../JS/SchedulerJHS.js"></script>
+</body>
+</html>

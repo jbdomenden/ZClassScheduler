@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>ZClassScheduler</title>
+
+    <!-- Shared/global styles -->
+    <link rel="stylesheet" href="../CSS/base.css" />
+    <!-- Page-specific styles for tertiary schedule builder -->
+    <link rel="stylesheet" href="../CSS/SchedulerDesign.css" />
+</head>
+
+<body>
+<!-- Top bar is injected dynamically (see load-global.js) -->
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <!-- Sidebar navigation is injected dynamically (see load-global.js / GlobalSidebar.js) -->
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <!-- Main content: Tertiary schedule builder -->
+    <main>
+        <div class="page-header">
+            <h2>Tertiary Schedule Builder</h2>
+            <p class="subtitle">Create section blocks first, then fill schedules later</p>
+        </div>
+
+        <!-- Toolbar: search + primary action -->
+        <div class="toolbar">
+            <span class="search-icon">🔍</span>
+
+            <!-- Search filter (filterBySection() defined in page script) -->
+            <input
+                    type="text"
+                    id="sectionSearch"
+                    placeholder="Search section…"
+                    oninput="filterBySection()"
+            />
+
+            <!-- Primary action: open section-block modal -->
+            <button class="primary" onclick="openAddModal()">
+                <span class="icon">＋</span>
+                Add Section Block
+            </button>
+        </div>
+
+        <!-- Schedule list table -->
+        <section class="panel">
+            <table id="scheduleTable">
+                <thead>
+                <tr>
+                    <th>SECTION</th>
+                    <th>COURSE CODE</th>
+                    <th>COURSE DESCRIPTION</th>
+                    <th>DAY</th>
+                    <th>TIME</th>
+                    <th>ROOM</th>
+                    <th>INSTRUCTOR</th>
+                    <th>ACTIONS</th>
+                </tr>
+                </thead>
+
+                <!-- IMPORTANT: Table rows are rendered dynamically by SchedulerNAMEI.js -->
+                <tbody></tbody>
+            </table>
+        </section>
+    </main>
+</div>
+
+<!-- Add/Edit modal (hidden by default; toggled by openAddModal()/closeAddModal()) -->
+<!-- IMPORTANT: "hidden" class controls visibility while keeping the modal in the DOM -->
+<div id="addScheduleModal" class="backdrop hidden">
+    <div class="modal">
+        <form id="scheduleForm">
+            <!-- Course (used as prefix for the section code; "bb" is referenced in UI copy) -->
+            <select id="course" required onchange="onCourseChange()">
+                <option value="">Select Course (bb)</option>
+            </select>
+
+            <!-- Curriculum list is loaded from DB and filtered by selected course -->
+            <select id="curriculum" required onchange="onCurriculumChange()">
+                <option value="">Select Curriculum</option>
+            </select>
+
+            <!-- Year + term: used to derive yearTerm (typically 1..8) -->
+            <!-- NOTE: Inline styles kept to preserve layout without changing CSS flow -->
+            <div style="display: flex; gap: 10px;">
+                <select id="year" required onchange="onYearOrTermChange()">
+                    <option value="">Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+
+                <select id="term" required onchange="onYearOrTermChange()">
+                    <option value="">Term</option>
+                    <option value="1">1st Term</option>
+                    <option value="2">2nd Term</option>
+                </select>
+            </div>
+
+            <!-- Section format selector + live preview -->
+            <div
+                    style="
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            flex-wrap: wrap;
+          "
+            >
+                <label style="display: flex; gap: 6px; align-items: center;">
+                    <input
+                            type="radio"
+                            name="sectionType"
+                            id="typeNumeric"
+                            value="NUM"
+                            checked
+                            onchange="updateSectionPreview()"
+                    />
+                    Numeric (01, 02, ...)
+                </label>
+
+                <label style="display: flex; gap: 6px; align-items: center;">
+                    <input
+                            type="radio"
+                            name="sectionType"
+                            id="typeAlpha"
+                            value="ALPHA"
+                            onchange="updateSectionPreview()"
+                    />
+                    Alpha (A, B, ...)
+                </label>
+
+                <span style="margin-left: auto; font-size: 12px; opacity: 0.8;">
+            Preview:
+          </span>
+                <strong id="sectionPreview" style="font-size: 14px;">—</strong>
+            </div>
+
+            <!-- NOTE: Schedule fields may be nullable for section blocks -->
+            <p style="margin: 0; font-size: 12px; opacity: 0.8;">
+                Course code → instructor are optional at this stage. You can fill them
+                when adding actual schedules.
+            </p>
+
+            <!-- Modal actions -->
+            <div class="modal-actions">
+                <button type="button" onclick="closeAddModal()">Cancel</button>
+                <button type="submit" class="primary">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Page logic (module) -->
+<script type="module" src="../JS/SchedulerNAMEI.js"></script>
+
+<!-- Shared layout injection: header + sidebar -->
+<script src="../JS/load-global.js"></script>
+
+<!-- Navigation interactions (role filtering, toggle, logout, etc.) -->
+<script src="../JS/GlobalSidebar.js"></script>
+
+<!-- Edit Row Modal (for editing individual schedule rows inside a section block) -->
+<div id="editRowModal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Edit Schedule</h3>
+        <div id="editRowMeta" style="margin:-6px 0 10px;font-size:12px;opacity:.85;"></div>
+
+        <form id="editRowForm">
+            <input type="hidden" id="editScheduleId" />
+
+            <label>Day</label>
+            <select id="editDay">
+                <option value="">(Unset)</option>
+                <option value="MONDAY">MONDAY</option>
+                <option value="TUESDAY">TUESDAY</option>
+                <option value="WEDNESDAY">WEDNESDAY</option>
+                <option value="THURSDAY">THURSDAY</option>
+                <option value="FRIDAY">FRIDAY</option>
+                <option value="SATURDAY">SATURDAY</option>
+            </select>
+
+            <label>Time Start</label>
+            <input id="editStart" type="time" />
+
+            <label>Time End</label>
+            <input id="editEnd" type="time" />
+
+            <label>Room</label>
+            <select id="editRoom">
+                <option value="">(Unset)</option>
+            </select>
+
+            <label>Instructor</label>
+            <select id="editInstructor">
+                <option value="">(Unset)</option>
+            </select>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" id="editCancelBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

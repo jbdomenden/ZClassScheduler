@@ -1,0 +1,8 @@
+POST http://127.0.0.1:8080/api/settings/curriculums
+Content-Type: application/json
+
+{
+  "courseCode": "BI",
+  "name": "BSIT-24-01",
+  "dept": "TERTIARY_STI"
+}

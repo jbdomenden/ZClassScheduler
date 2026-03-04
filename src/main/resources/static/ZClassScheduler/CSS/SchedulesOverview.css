@@ -1,0 +1,39 @@
+/* ================= VARIABLES ================= */
+:root{
+    --bg-main:#f1f5f9;
+    --bg-dark:#020617;
+    --text-muted:#64748b;
+    --border:#e5e7eb;
+}
+
+/* ================= BASE ================= */
+*{box-sizing:border-box;font-family:Inter,Arial,sans-serif;}
+body{margin:0;background:var(--bg-main);color:#0f172a;}
+
+/* ================= LAYOUT ================= */
+.container{display:flex;height:calc(100vh - 60px);}
+main{flex:1;padding:24px;overflow-y:auto;}
+
+/* ================= HEADER ================= */
+.page-header h2{margin:0;font-size:22px;}
+.subtitle{font-size:13px;color:var(--text-muted);}
+
+/* ================= PANEL ================= */
+.panel{background:#fff;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.04);overflow:hidden;}
+.panel-header{padding:14px 16px;border-bottom:1px solid var(--border);}
+.panel-header h3{margin:0;font-size:15px;}
+
+/* ================= TABLE ================= */
+.schedule-table{max-height:520px;overflow:auto;}
+table{width:100%;font-size:12px;}
+thead th{position:sticky;top:0;z-index:5;background:#f8fafc;font-size:12px;text-transform:uppercase;color:#64748b;border:2px solid #0000008C;padding:8px;text-align:center;}
+td{padding:5px;text-align:center;border:2px solid rgba(78,78,78,.55);}
+
+/* ================= SECTION GROUPING ================= */
+.section-cell{background:#cdeac0;font-weight:700;vertical-align:middle;}
+.section-break td{height:16px;border-collapse:collapse;background:transparent;}
+
+/* ================= SIDEBAR TOGGLE ================= */
+.sidebar{width:250px;transition:transform .25s ease,width .25s ease;}
+.sidebar.collapsed{width:0;transform:translateX(-100%);overflow:hidden;}
+.container.sidebar-collapsed main{flex:1;width:100%;}

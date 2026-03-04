@@ -1,0 +1,443 @@
+/* Toolbar */
+.toolbar {
+    margin: 16px 0;
+}
+
+button.primary {
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+}
+
+/* Table */
+table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+}
+
+th, td {
+    border:2px solid #0000008C;
+    padding:8px;
+    text-align:center;
+}
+
+th {
+    background:#f8fafc;
+    text-transform:uppercase;
+    font-size:11px;
+    color:#64748b;
+}
+
+/* Actions */
+.action {
+    font-size:11px;
+    padding:4px 6px;
+    margin:0 2px;
+    border:1px solid #020617;
+    border-radius:4px;
+    cursor:pointer;
+}
+
+.edit { color:#1d4ed8; }
+.delete { color:#b91c1c; }
+
+/* Modal */
+.backdrop {
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.4);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.backdrop.hidden {
+    display:none;
+}
+
+.modal {
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    width:420px;
+}
+
+.modal input, .modal select {
+    width:100%;
+    margin-bottom:8px;
+    padding:8px;
+}
+
+.modal-actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+}
+/* ===============================
+   SIDEBAR TOGGLE (FIXED)
+================================ */
+
+.sidebar {
+    width: 250px;
+    transition: transform 0.25s ease, width 0.25s ease;
+}
+
+/* Desktop hidden */
+.sidebar.collapsed {
+    width: 0;
+    transform: translateX(-100%);
+    overflow: hidden;
+}
+
+/* Main expands FULL width */
+.container.sidebar-collapsed main {
+    flex: 1;
+    width: 100%;
+}
+td small {
+    font-weight: 500;
+    font-size: 11px;
+}
+
+.highlight {
+    color: red;
+    font-weight: 700;
+}
+
+:root {
+    --bg-main:#f1f5f9;
+    --bg-dark:#020617;
+    --bg-card:#ffffff;
+    --text-muted:#94a3b8;
+    --border: #e5e7eb;
+    --slot: #e5e7eb;
+
+    /* Semantic colors */
+    --good:#16a34a;     /* HIGH utilization */
+    --warn:#f59e0b;     /* MEDIUM */
+    --bad:#dc2626;      /* LOW utilization */
+}
+
+* { box-sizing:border-box; font-family:Inter,Arial,sans-serif; }
+
+body {
+    margin:0;
+    background:var(--bg-main);
+    color:#0f172a;
+}
+
+
+/* ───── Layout ───── */
+.container {
+    display:flex;
+    height:calc(100vh - 60px);
+}
+
+/* ───── Sidebar ───── */
+.sidebar {
+    width:250px;
+    background:var(--bg-dark);
+    color:#e5e7eb;
+    padding:16px 12px;
+    overflow-y:auto;
+}
+.sidebar h4 {
+    margin:18px 8px 6px;
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--text-muted);
+}
+.sidebar a,
+.sidebar summary {
+    display:flex;
+    align-items:center;
+    padding:8px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    text-decoration:none;
+    color:#e5e7eb;
+    font-size:14px;
+}
+.sidebar a:hover,
+.sidebar summary:hover { background:#1e293b; }
+.sidebar a.active { background:#1e293b; }
+details > a { padding-left:22px; font-size:13px; }
+
+.sidebar details[open] > a {
+    padding-left:36px;
+    color:#cbd5f5;
+}
+
+/* ───── Main ───── */
+main {
+    flex:1;
+    padding:24px;
+    overflow-y:auto;
+}
+
+/* ───── Header ───── */
+.page-header h2 { margin:0; font-size:22px; }
+.subtitle { font-size:13px; color:#64748b; }
+
+/* ───── KPI Cards ───── */
+.kpi-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:16px;
+    margin:20px 0;
+}
+.kpi-card {
+    background:white;
+    border-radius:12px;
+    padding:16px;
+    box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.kpi-card span {
+    font-size:12px;
+    color:#64748b;
+}
+.kpi-card strong {
+    display:block;
+    margin-top:6px;
+    font-size:30px;
+}
+
+/* ───── Panels ───── */
+.content-grid {
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:20px;
+}
+.panel {
+    background:white;
+    border-radius:12px;
+    box-shadow:0 2px 6px rgba(0,0,0,.04);
+    overflow:hidden;
+}
+.panel-header {
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+}
+.panel-header h3 { margin:0; font-size:15px; }
+
+/* ───── Tables ───── */
+table {
+    width:100%;
+    border-collapse:collapse;
+    border:2px solid rgba(78,78,78,.55);
+;
+}
+th, td {
+    padding:12px 14px;
+    border-bottom:1px solid var(--border);
+}
+th {
+    font-size:12px;
+    text-transform:uppercase;
+    color:var(--text-muted);
+    background:#f8fafc;
+}
+
+/* ───── Utilization Visualization ───── */
+.util-bar {
+    height:8px;
+    background:#e5e7eb;
+    border-radius:999px;
+    overflow:hidden;
+    margin-top:6px;
+}
+.util-fill {
+    height:100%;
+    border-radius:999px;
+}
+
+/* HIGH = GOOD */
+.high { background:var(--good); }
+
+/* MEDIUM = WARNING */
+.medium { background:var(--warn); }
+
+/* LOW = BAD */
+.low { background:var(--bad); }
+
+.overall-row {
+    background:#f1f5f9;
+    font-weight:700;
+}
+/* ───── Conflict List ───── */
+.conflict{
+    padding:12px 16px;
+    border-left:4px solid var(--bad);
+    background:#fff5f5;
+    font-size:13px;
+}
+.conflict strong{color:var(--bad)}
+.conflict:not(:last-child){border-bottom:1px solid var(--border)}
+
+/* ───── Room Grid ───── */
+.room-grid {
+    overflow:auto;
+    max-height:520px;
+}
+table {
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+}
+th, td {
+    border-bottom:1px solid var(--border);
+    padding:6px;
+    text-align:center;
+    background: rgba(183, 255, 143, 0.56);
+
+}
+th {
+    background:#f8fafc;
+    color:var(--text-muted);
+    text-transform:uppercase;
+}
+.time-col {
+    width:90px;
+    background:#f8fafc;
+    font-weight:600;
+}
+
+/* ───── Slot Styling ───── */
+.slot {
+    background:rgba(37,99,235,.15);
+    border-left:4px solid var(--slot);
+    height:100%;
+    padding:1px;
+    font-size:11px;
+}
+.slot.start {
+    border-top-left-radius:6px;
+    border-top-right-radius:6px;
+}
+.slot.end {
+    border-bottom-left-radius:6px;
+    border-bottom-right-radius:6px;
+}
+/* ===============================
+   SIDEBAR TOGGLE (FIXED)
+================================ */
+
+.sidebar {
+    width: 250px;
+    transition: transform 0.25s ease, width 0.25s ease;
+}
+
+/* Desktop hidden */
+.sidebar.collapsed {
+    width: 0;
+    transform: translateX(-100%);
+    overflow: hidden;
+}
+
+/* Main expands FULL width */
+.container.sidebar-collapsed main {
+    flex: 1;
+    width: 100%;
+}
+/* ===============================
+   ACTION BUTTONS
+================================ */
+
+td .action-btn,
+td button {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: .3px;
+    transition: background .15s ease, transform .1s ease, box-shadow .1s ease;
+}
+
+/* EDIT */
+td button.edit,
+td button:first-child {
+    background: #2563eb; /* blue-600 */
+    color: #fff;
+}
+
+td button.edit:hover,
+td button:first-child:hover {
+    background: #1d4ed8;
+}
+
+/* DELETE */
+td button.delete,
+td button:last-child {
+    background: #dc2626; /* red-600 */
+    color: #fff;
+}
+
+td button.delete:hover,
+td button:last-child:hover {
+    background: #b91c1c;
+}
+
+/* BUTTON GROUP */
+td button + button {
+    margin-left: 6px;
+}
+
+/* ACTIVE FEEDBACK */
+td button:active {
+    transform: scale(.96);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.2);
+}
+
+td.section{
+    background: rgba(186, 255, 150, 0.75);
+}
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+/* Add button icon */
+.primary .icon {
+    margin-right: 6px;
+    font-weight: bold;
+}
+
+/* Search box */
+.search-box {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.search-icon {
+    font-size: 14px;
+    color: #64748b;
+    margin-right: 6px;
+}
+
+#sectionSearch {
+    border: none;
+    outline: none;
+    font-size: 14px;
+    width: 180px;
+}
+
+/* Focus effect */
+.search-box:focus-within {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}

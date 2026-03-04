@@ -1,0 +1,9 @@
+PUT http://127.0.0.1:8080/api/settings/courses/{id}
+Content-Type: application/json
+
+{
+  "code": "BI",
+  "name": "BSIT",
+  "level": "Tertiary",
+  "active": true
+}
