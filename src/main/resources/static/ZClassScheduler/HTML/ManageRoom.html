@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -9,7 +9,12 @@
     <link rel="stylesheet" href="../CSS/base.css" />
     <!-- Page-specific styles for CRUD layout + modal UI -->
     <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 <!-- Global header populated dynamically (see load-global.js) -->
@@ -39,11 +44,11 @@
                 <table id="roomTable">
                     <thead>
                     <tr>
-                        <th data-key="code">Room</th>
-                        <th data-key="floor">Floor</th>
-                        <th data-key="capacity">Capacity</th>
-                        <th data-key="type">Type</th>
-                        <th data-key="status">Status</th>
+                        <th data-key="code">Room<span class="sort-icon"></span></th>
+                        <th data-key="floor">Floor<span class="sort-icon"></span></th>
+                        <th data-key="capacity">Capacity<span class="sort-icon"></span></th>
+                        <th data-key="type">Type<span class="sort-icon"></span></th>
+                        <th data-key="status">Status<span class="sort-icon"></span></th>
                         <th width="150">Actions</th>
                     </tr>
                     </thead>

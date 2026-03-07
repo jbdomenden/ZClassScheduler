@@ -1,13 +1,21 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZClassScheduler</title>
 
     <!-- Shared/base styles used across pages -->
     <link rel="stylesheet" href="../CSS/base.css" />
     <!-- Page-specific styles for CRUD layout + modal UI -->
     <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+<body>
+
 <!-- Parse/Upload Progress Overlay -->
 <div id="parseProgressOverlay" class="parse-progress-overlay">
     <div class="parse-progress-card">
@@ -28,7 +36,7 @@
         </div>
     </div>
 </div>
-<body>
+
 <!-- Global header populated dynamically (see load-global.js) -->
 <header id="global-header" class="topbar"></header>
 
@@ -51,6 +59,7 @@
                 <div class="panel-actions">
                     <!-- Primary action: open upload modal -->
                     <button id="uploadBtn" class="btn btn-primary">Upload Curriculum</button>
+                    <button id="manualCreateBtn" class="btn btn-secondary" type="button">Manual Create</button>
                     <!-- Delete-mode toggle (behavior handled in ManageCurriculum.js) -->
                     <button id="deleteModeBtn" class="btn btn-delete">Delete Curriculum</button>
                 </div>
@@ -60,10 +69,10 @@
                 <table id="curriculumListTable">
                     <thead>
                     <tr>
-                        <th data-key="curriculumCode">Curriculum Code</th>
-                        <th data-key="program">Program</th>
-                        <th data-key="dept">Department</th>
-                        <th data-key="isActive">Status</th>
+                        <th data-key="curriculumCode">Curriculum Code<span class="sort-icon"></span></th>
+                        <th data-key="program">Program<span class="sort-icon"></span></th>
+                        <th data-key="dept">Department<span class="sort-icon"></span></th>
+                        <th data-key="isActive">Status<span class="sort-icon"></span></th>
                         <th width="220">Actions</th>
                     </tr>
                     </thead>
@@ -129,8 +138,67 @@
     </div>
 </div>
 
+<!-- Manual Create Curriculum Modal -->
+<div id="manualCreateModal" class="modal hidden">
+    <div class="modal-content modal-lg">
+        <h3>Manual Create Curriculum</h3>
+
+        <form id="manualCreateForm" class="crud-scope">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Department</label>
+                    <select id="manualDeptSelect" required>
+                        <option value="" disabled selected>Select Department</option>
+                        <option value="TERTIARY_STI">Tertiary STI</option>
+                        <option value="TERTIARY_NAMEI">Tertiary NAMEI</option>
+                        <option value="JHS">Junior High School</option>
+                        <option value="SHS">Senior High School</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Program / Course Code</label>
+                    <select id="manualCourseCode" required>
+                        <option value="" disabled selected>Select Program</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label>Curriculum Code</label>
+                    <input id="manualCurriculumCode" type="text" placeholder="e.g. BSCS-24-01" required />
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0 10px;">
+                <button id="manualTemplateBtn" class="btn btn-secondary" type="button">Create Template</button>
+                <button id="manualAddRowBtn" class="btn btn-secondary" type="button">Add Subject Row</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="manualSubjectsTable">
+                    <thead>
+                    <tr>
+                        <th style="width:120px;">Year/Term</th>
+                        <th style="width:160px;">Subject Code</th>
+                        <th>Subject Name</th>
+                        <th style="width:90px;">Remove</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Create</button>
+                <button type="button" id="manualCloseBtn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Loads shared header/sidebar content into #global-header and #global-nav -->
 <script src="../JS/load-global.js"></script>
+<script src="../JS/GlobalSidebar.js"></script>
 
 <!-- PDF.js (client-side PDF parsing for program auto-detection) -->
 <!-- IMPORTANT: External dependency loaded via CDN -->

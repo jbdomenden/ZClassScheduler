@@ -3,11 +3,11 @@ package zeroday.Queries.Schedules
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
+import zeroday.Controller.service.ScheduleTimePolicy
 import zeroday.Models.db.tables.Curriculums
 import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
@@ -22,7 +22,17 @@ object SchedulerSTI_Repository {
     private val formatter = DateTimeFormatter.ofPattern("HH:mm")
 
     fun listBlocks(): List<TertiaryBlockResponse> = transaction {
-        val rows = Schedules.selectAll().toList()
+        // Only include schedules that belong to STI tertiary curriculums.
+        // This prevents the STI scheduler page from showing blocks created by other schedulers.
+        val allowed = Curriculums
+            .slice(Curriculums.id)
+            .select { (Curriculums.dept eq "TERTIARY_STI") and (Curriculums.active eq true) }
+            .map { it[Curriculums.id] }
+
+        if (allowed.isEmpty()) return@transaction emptyList()
+
+        val rows = Schedules.select { (Schedules.curriculumId inList allowed) }.toList()
+        if (rows.isEmpty()) return@transaction emptyList()
 
         // subjectId -> subjectCode lookup (from curriculum subjects)
         val subjectIds = rows.map { it[Schedules.subjectId] }.distinct()
@@ -52,6 +62,10 @@ object SchedulerSTI_Repository {
                 levelIndex = first[Schedules.levelIndex],
                 active = first[Schedules.active],
                 rows = schedules.map { s ->
+                    val (ns, ne) = ScheduleTimePolicy.normalizeForReadOrReset(
+                        s[Schedules.timeStart],
+                        s[Schedules.timeEnd]
+                    )
                     TertiaryRowResponse(
                         id = s[Schedules.id].toString(),
                         subjectId = s[Schedules.subjectId].toString(),
@@ -59,11 +73,12 @@ object SchedulerSTI_Repository {
                         subjectName = s[Schedules.subjectName],
                         isElective = s[Schedules.isElective],
                         dayOfWeek = s[Schedules.dayOfWeek],
-                        timeStart = s[Schedules.timeStart]?.format(formatter),
-                        timeEnd = s[Schedules.timeEnd]?.format(formatter),
+                        timeStart = ns?.format(formatter),
+                        timeEnd = ne?.format(formatter),
                         roomId = s[Schedules.roomId]?.toString(),
                         teacherId = s[Schedules.teacherId]?.toString(),
-                        active = s[Schedules.active]
+                        active = s[Schedules.active],
+                        isDuplicateRow = s[Schedules.isDuplicateRow]
                     )
                 }
             )
@@ -78,10 +93,14 @@ object SchedulerSTI_Repository {
         roomId: UUID?,
         teacherId: UUID?
     ) = transaction {
+        val parsedStart = start?.trim()?.takeIf { it.isNotBlank() }?.let { LocalTime.parse(it) }
+        val parsedEnd = end?.trim()?.takeIf { it.isNotBlank() }?.let { LocalTime.parse(it) }
+        val (ns, ne) = ScheduleTimePolicy.normalizeStrictOrNull(parsedStart, parsedEnd)
+
         Schedules.update({ Schedules.id eq id }) {
             it[dayOfWeek] = day
-            it[timeStart] = start?.let { LocalTime.parse(it) }
-            it[timeEnd] = end?.let { LocalTime.parse(it) }
+            it[timeStart] = ns
+            it[timeEnd] = ne
             it[Schedules.roomId] = roomId
             it[Schedules.teacherId] = teacherId
         }

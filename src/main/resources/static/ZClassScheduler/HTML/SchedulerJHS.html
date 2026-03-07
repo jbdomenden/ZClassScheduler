@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -6,35 +6,18 @@
     <title>ZClassScheduler - JHS Schedule</title>
 
     <!-- Global / shared styles -->
-    <link rel="stylesheet" href="../CSS/Dashboard.css" />
+    <link rel="stylesheet" href="../CSS/base.css" />
     <link rel="stylesheet" href="../CSS/ManageDesign.css" />
 
     <!-- Scheduler theme (IMPORTANT) -->
     <link rel="stylesheet" href="../CSS/SchedulerDesign.css" />
 
-    <!-- Small JHS-only additions (safe with scheduler.css) -->
-    <style>
-        /* Hover bottom-border + centered "+" handle like STI tertiary */
-        tr.subject-head { position: relative; }
-        tr.subject-head .add-row-handle{
-          position:absolute;
-          left:50%;
-          bottom:-14px;
-          transform:translateX(-50%);
-          width:26px;
-          height:26px;
-          border-radius:999px;
-          display:none;
-          align-items:center;
-          justify-content:center;
-          font-weight:800;
-          cursor:pointer;
-          z-index:10;
-          box-shadow:0 6px 18px rgba(0,0,0,.25);
-        }
-        tr.subject-head:hover .add-row-handle{ display:inline-flex; }
-    </style>
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 <!-- Global header injected by load-global.js -->
@@ -49,77 +32,84 @@
         <!-- Page title block (same feel as STI) -->
         <div class="page-header">
             <h2>JHS Schedule</h2>
-            <p class="subtitle">Create blocks and assign schedules (Grade 7–10)</p>
+            <p class="subtitle">Create blocks and assign schedules (Grade 7-10)</p>
         </div>
 
-        <!-- Controls row (same feel as STI) -->
-        <div class="panel-header" style="display:flex;gap:12px;align-items:center;justify-content:space-between;">
-            <div class="search-wrapper" style="max-width:320px;width:100%;">
-                <input id="searchInput" class="search-input" placeholder="Search..." />
+        <section class="panel">
+            <div class="panel-header">
+                <div id="searchContainer"></div>
+
+                <div class="panel-actions">
+                    <button id="openWizardBtn" class="btn btn-primary">+ Add Schedule</button>
+                    <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+                </div>
             </div>
 
-            <div style="display:flex;gap:10px;align-items:center;">
-                <button id="openWizardBtn" class="btn btn-primary">+ Add Schedule</button>
-                <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+            <div class="table-wrapper">
+                <table id="blocksTable">
+                    <thead>
+                    <tr>
+                        <th data-key="section">Section<span class="sort-icon"></span></th>
+                        <th data-key="program">Program<span class="sort-icon"></span></th>
+                        <th data-key="grade">Grade<span class="sort-icon"></span></th>
+                        <th data-key="status">Status<span class="sort-icon"></span></th>
+                        <th width="220">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
-        </div>
-
-        <!-- Blocks table -->
-        <div class="table-wrapper">
-            <table id="blocksTable">
-                <thead>
-                <tr>
-                    <th>SECTION</th>
-                    <th>PROGRAM</th>
-                    <th>GRADE</th>
-                    <th>STATUS</th>
-                    <th width="220">ACTIONS</th>
-                </tr>
-                </thead>
-                <tbody>
-                <!-- JS renders rows -->
-                </tbody>
-            </table>
-        </div>
+        </section>
 
         <!-- =========================
              CREATE BLOCK MODAL (Wizard)
              ========================= -->
         <div id="wizardModal" class="modal hidden">
-            <div class="modal-content">
-                <h3>Create Schedule Block</h3>
+            <div class="modal-content modal-lg">
+                <h3 id="wizardTitle">Create Schedule Block</h3>
 
-                <form id="wizardForm">
-                    <label>Program</label>
-                    <select id="programSelect" required>
-                        <option value="">Select program...</option>
-                    </select>
+                <form id="wizardForm" class="crud-scope">
+                    <div class="form-grid">
 
-                    <label>Curriculum</label>
-                    <select id="curriculumSelect" required>
-                        <option value="">Select curriculum...</option>
-                    </select>
+                        <div class="form-field">
+                            <label>Program</label>
+                            <select id="programSelect" required>
+                                <option value="" disabled selected>Select Program</option>
+                            </select>
+                        </div>
 
-                    <label>Grade</label>
-                    <select id="gradeSelect" required>
-                        <option value="">Select grade...</option>
-                        <option value="7">Grade 7</option>
-                        <option value="8">Grade 8</option>
-                        <option value="9">Grade 9</option>
-                        <option value="10">Grade 10</option>
-                    </select>
+                        <div class="form-field">
+                            <label>Curriculum</label>
+                            <select id="curriculumSelect" required>
+                                <option value="" disabled selected>Select Curriculum</option>
+                            </select>
+                        </div>
 
-                    <label>Section Name</label>
-                    <!-- keep your JS id the same; if your JS uses sectionCodeInput, keep it -->
-                    <input
-                            id="sectionCodeInput"
-                            type="text"
-                            placeholder="e.g., Diamond"
-                            required
-                    />
+                        <div class="form-field">
+                            <label>Grade</label>
+                            <select id="gradeSelect" required>
+                                <option value="" disabled selected>Select Grade</option>
+                                <option value="7">Grade 7</option>
+                                <option value="8">Grade 8</option>
+                                <option value="9">Grade 9</option>
+                                <option value="10">Grade 10</option>
+                            </select>
+                        </div>
+
+                        <div class="form-field">
+                            <label>Section Name</label>
+                            <input
+                                    id="sectionNameInput"
+                                    type="text"
+                                    placeholder="e.g., Diamond"
+                                    required
+                            />
+                        </div>
+
+                    </div>
 
                     <div class="modal-actions">
-                        <button type="submit" class="btn btn-primary">Create</button>
+                        <button type="submit" class="btn btn-primary">Create Block</button>
                         <button type="button" id="wizardCancelBtn" class="btn btn-secondary">Cancel</button>
                     </div>
                 </form>
@@ -131,11 +121,11 @@
              ========================= -->
         <div id="editRowModal" class="modal hidden">
             <div class="modal-content">
-                <h3>Edit Schedule</h3>
+                <h3 id="editRowTitle">Edit Schedule</h3>
 
                 <div id="editRowMeta" style="margin:-6px 0 10px;font-size:12px;opacity:.85;"></div>
 
-                <form id="editRowForm">
+                <form id="editRowForm" class="crud-scope">
                     <input type="hidden" id="editScheduleId"/>
 
                     <label>Day</label>
@@ -149,11 +139,21 @@
                         <option value="SATURDAY">SATURDAY</option>
                     </select>
 
-                    <label>Time Start</label>
-                    <input id="editStart" type="time"/>
+                    <div class="form-row">
+                        <div class="form-field">
+                            <label>Time Start</label>
+                            <select id="editStart">
+                                <option value="">(Unset)</option>
+                            </select>
+                        </div>
 
-                    <label>Time End</label>
-                    <input id="editEnd" type="time"/>
+                        <div class="form-field">
+                            <label>Time End</label>
+                            <select id="editEnd">
+                                <option value="">(Unset)</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <label>Room</label>
                     <select id="editRoom">

@@ -5,8 +5,8 @@
 <!-- IMPORTANT: Visibility of some links is controlled via data-role + load-global.js -->
 <nav>
     <!-- Dashboard section -->
-    <h3>Dashboard</h3>
-    <a href="Dashboard.html">Overview</a>
+    <h3 data-role="ADMIN,SUPER_ADMIN">Dashboard</h3>
+    <a data-role="ADMIN,SUPER_ADMIN" href="Dashboard.html">Overview</a>
 
     <!-- Schedules section -->
     <h3>Schedules</h3>
@@ -21,14 +21,14 @@
     </details>
 
     <!-- Collapsible: Tertiary departments -->
-    <details>
+    <details data-role="ADMIN,SUPER_ADMIN">
         <summary>Tertiary Department</summary>
         <a href="SchedulerSTI.html">STI Tertiary</a>
         <a href="SchedulerNAMEI.html">NAMEI Tertiary</a>
     </details>
 
     <!-- Collapsible: High school departments -->
-    <details>
+    <details data-role="ADMIN,SUPER_ADMIN">
         <summary>High School Department</summary>
         <a href="SchedulerJHS.html">Junior High School</a>
         <a href="SchedulerSHS.html">Senior High School</a>
@@ -37,8 +37,13 @@
     <!-- Settings section (role-restricted via data-role) -->
     <h3 data-role="ADMIN,SUPER_ADMIN">Settings</h3>
 
-    <a data-role="ADMIN,SUPER_ADMIN" href="ManageRoom.html">Manage Rooms</a>
+    <a data-role="SUPER_ADMIN" href="ManageRoom.html">Manage Rooms</a>
     <a data-role="ADMIN,SUPER_ADMIN" href="ManageTeacher.html">Manage Teachers</a>
     <a data-role="SUPER_ADMIN" href="ManageCurriculum.html">Manage Curriculum</a>
     <a data-role="SUPER_ADMIN" href="ManageCourse.html">Manage Courses</a>
+
+    <!-- Logs section -->
+    <h3 data-role="CHECKER,ADMIN,SUPER_ADMIN">Logs</h3>
+    <a data-role="SUPER_ADMIN" href="AuditLogs.html">Audit Logs</a>
+    <a data-role="CHECKER,ADMIN,SUPER_ADMIN" href="CheckerLogs.html">Checker Logs</a>
 </nav>

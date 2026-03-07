@@ -1,6 +1,10 @@
 package zeroday.Queries.Schedules
 
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greater
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -41,5 +45,41 @@ object TeacherBlockRepository {
             it[timeStart] = start
             it[timeEnd] = end
         }
+    }
+
+    fun listByTeacher(teacherId: UUID) = transaction {
+        TeacherBlocks
+            .select { TeacherBlocks.teacherId eq teacherId }
+            .map {
+                mapOf(
+                    "id" to it[TeacherBlocks.id].toString(),
+                    "teacherId" to it[TeacherBlocks.teacherId].toString(),
+                    "type" to it[TeacherBlocks.type].name,
+                    "dayOfWeek" to it[TeacherBlocks.dayOfWeek],
+                    "timeStart" to it[TeacherBlocks.timeStart].toString(),
+                    "timeEnd" to it[TeacherBlocks.timeEnd].toString(),
+                )
+            }
+    }
+
+    fun findById(id: UUID): Map<String, Any?>? = transaction {
+        TeacherBlocks
+            .select { TeacherBlocks.id eq id }
+            .limit(1)
+            .singleOrNull()
+            ?.let {
+                mapOf(
+                    "id" to it[TeacherBlocks.id].toString(),
+                    "teacherId" to it[TeacherBlocks.teacherId].toString(),
+                    "type" to it[TeacherBlocks.type].name,
+                    "dayOfWeek" to it[TeacherBlocks.dayOfWeek],
+                    "timeStart" to it[TeacherBlocks.timeStart].toString(),
+                    "timeEnd" to it[TeacherBlocks.timeEnd].toString(),
+                )
+            }
+    }
+
+    fun delete(id: UUID): Int = transaction {
+        TeacherBlocks.deleteWhere { TeacherBlocks.id eq id }
     }
 }

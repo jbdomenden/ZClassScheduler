@@ -30,6 +30,10 @@ export function renderScheduleList(tableId, data) {
         entries.forEach((entry, index) => {
 
             const tr = document.createElement("tr");
+            if (entry.conflict) tr.classList.add("conflict-row");
+            if (entry.conflictRemarks && entry.conflictRemarks.length) {
+                tr.title = entry.conflictRemarks.join("\n");
+            }
 
             /* ==========================================================
                SECTION CELL (ROWSPAN)
@@ -43,7 +47,7 @@ export function renderScheduleList(tableId, data) {
 
                 sectionTd.innerHTML = `
                     <strong>${entry.section}</strong><br>
-                    <small>Curriculum ${entry.curriculum}</small>
+                    <small>${entry.source ? `${entry.source} | ` : ""}Curriculum ${entry.curriculum}</small>
                 `;
 
                 tr.appendChild(sectionTd);
@@ -103,10 +107,11 @@ function groupBySection(data) {
     const map = {};
 
     data.forEach(entry => {
-        if (!map[entry.section]) {
-            map[entry.section] = [];
+        const key = entry.sectionKey || entry.section;
+        if (!map[key]) {
+            map[key] = [];
         }
-        map[entry.section].push(entry);
+        map[key].push(entry);
     });
 
     return map;

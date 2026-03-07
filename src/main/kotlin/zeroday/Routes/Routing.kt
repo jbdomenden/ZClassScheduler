@@ -14,6 +14,7 @@ import zeroday.Routes.Schedules.jhsSchedulerRoutes
 import zeroday.Routes.Schedules.tertiarySchedulerRoutes
 import zeroday.Routes.Schedules.nameiSchedulerRoutes
 import zeroday.Routes.Schedules.shsSchedulerRoutes
+import zeroday.Routes.Schedules.teacherBlockViewRoutes
 import zeroday.Routes.Settings.courseManagementRoutes
 import zeroday.Routes.Settings.roomManagementRoutes
 import zeroday.Routes.Settings.teacherManagementRoutes
@@ -22,15 +23,21 @@ import zeroday.Routes.Settings.curriculumManagementRoutes
 import zeroday.Routes.Settings.curriculumRoutes
 import zeroday.Routes.Settings.roomRoutes
 import zeroday.Routes.Settings.subjectRoutes
+import zeroday.Routes.Settings.teacherBlockRoutes
+import zeroday.Routes.Settings.auditLogsRoutes
+import zeroday.Routes.Settings.checkerLogsRoutes
 
 fun Application.configureRouting() {
+    // Ensure Authentication is installed before any route uses authenticate("auth-jwt").
+    // (Also covers cases where Application.module wiring changes.)
+    configureSecurity()
+
     routing {
 
         // ---------- AUTH ----------
         authRoutes()
 
         // ---------- API ----------
-        configureSecurity()
         courseRoutes()
         curriculumRoutes()
         subjectRoutes()
@@ -41,14 +48,18 @@ fun Application.configureRouting() {
         roomRoutes()
         roomManagementRoutes()
         teacherManagementRoutes()
+        teacherBlockRoutes()
         courseManagementRoutes()
+        auditLogsRoutes()
+        checkerLogsRoutes()
+        teacherBlockViewRoutes()
         tertiarySchedulerRoutes()
         nameiSchedulerRoutes()
         shsSchedulerRoutes()
         jhsSchedulerRoutes()
 
 
-        // ✅ Manage Curriculum (DB + PDF upload flow)
+        // Manage Curriculum (DB + PDF upload flow)
         curriculumManagementRoutes()
 
         // ---------- STATIC FILES ----------
@@ -57,6 +68,15 @@ fun Application.configureRouting() {
             "static/ZClassScheduler"
         )
 
+        // Browsers often probe /favicon.ico even when pages declare a <link rel="icon">.
+        // Keep this working without exposing the entire classpath static root.
+        get("/favicon.ico") {
+            call.respondRedirect("/ZClassScheduler/Assets/zclassscheduler.ico", permanent = true)
+        }
+        get("/zclassscheduler.ico") {
+            call.respondRedirect("/ZClassScheduler/Assets/zclassscheduler.ico", permanent = true)
+        }
+
         // ---------- REDIRECTS ----------
         get("/ZCS") { call.respondRedirect("/ZClassScheduler/html/Login.html") }
         get("/ZCSDash") { call.respondRedirect("/ZClassScheduler/html/Dashboard.html") }
@@ -64,6 +84,6 @@ fun Application.configureRouting() {
         // ---------- HEALTH ----------
         get("/health") { call.respondText("OK") }
 
-        log.info("✅ All routes loaded successfully")
+        log.info("All routes loaded successfully")
     }
 }

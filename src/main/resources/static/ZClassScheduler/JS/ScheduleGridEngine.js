@@ -84,7 +84,9 @@ function renderEntries(tbody, entries, templateCallback) {
         if (!cell) return;
 
         cell.rowSpan = span;
-        cell.className = entry.type;
+        cell.className = entry.type || "";
+        if (entry.conflict) cell.classList.add("conflict-cell");
+        if (entry.conflictRemarks) cell.title = String(entry.conflictRemarks);
 
         cell.innerHTML = templateCallback(entry);
 

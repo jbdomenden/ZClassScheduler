@@ -1,16 +1,54 @@
-/* ================= SCHEDULE LIST TABLE ================= */
-.schedule-table{width:100%;overflow-x:auto;}
+/* Scheduler-like schedule list table (matches STI expanded schedule list look). */
+#scheduleTable{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    border-radius:10px;
+    border:1px solid #999;
+    background:#fff;
+    font-size:13px;
+    position:relative; /* anchor sticky header stacking */
+}
 
-/* ================= TABLE BASE ================= */
-#scheduleTable{width:100%;border-collapse:collapse;background:#fff;font-size:14px;}
-#scheduleTable th,#scheduleTable td{border:1px solid #cfcfcf;padding:10px 12px;text-align:center;vertical-align:middle;}
+#scheduleTable thead th{
+    background:#f1f1f1;
+    color:#0f172a;
+    font-weight:700;
+    letter-spacing:.4px;
+    padding:10px;
+    border:1px solid #999;
+    text-transform:uppercase;
+    position:sticky;
+    top:0;
+    z-index:6; /* above body cells while scrolling */
+}
 
-/* ================= HEADER ================= */
-#scheduleTable thead{background:#e6e6e6;}
-#scheduleTable th{font-weight:600;font-size:13px;letter-spacing:.5px;color:#3a3a3a;}
+/* Sticky header row (works best with a scrolling container like .table-wrapper). */
+#scheduleTable thead{
+    position:sticky;
+    top:0;
+    z-index:7;
+    background:#f1f1f1;
+}
+
+/* Some browsers apply sticky more reliably on the header row element. */
+#scheduleTable thead tr{
+    position:sticky;
+    top:0;
+    z-index:8;
+    background:#f1f1f1;
+}
+
+#scheduleTable tbody td{
+    padding:10px;
+    border:1px solid #666;
+    text-align:center;
+    vertical-align:middle;
+    background:#c9f7b6;
+}
 
 /* ================= SECTION COLUMN ================= */
-.section-cell{background:#b7d1a8;font-weight:600;color:#1f2d1f;min-width:120px;}
+.section-cell{background:#c9f7b6;font-weight:700;color:#0f172a;min-width:140px;}
 .section-cell small{display:block;margin-top:4px;font-size:11px;font-weight:500;color:#2f4f2f;}
 
 /* ================= COURSE DESCRIPTION ================= */
@@ -18,10 +56,20 @@
 #scheduleTable td:nth-child(3) small{display:block;margin-top:4px;font-size:12px;color:#666;text-transform:lowercase;}
 
 /* ================= SECTION SPACER ================= */
-.section-break td{border:none!important;height:12px;background:#f4f4f4;padding:0;}
+#scheduleTable tbody tr.section-break td{
+    border:none !important;
+    height:12px;
+    background:transparent !important; /* override tbody td background */
+    padding:0;
+}
 
 /* ================= ROW HOVER ================= */
-#scheduleTable tbody tr:hover:not(.section-break){background:#f9f9f9;}
+#scheduleTable tbody tr:hover:not(.section-break) td{filter:brightness(0.98);}
+
+/* Conflict highlight (computed overlaps) */
+#scheduleTable tbody tr.conflict-row td{
+    background:rgba(239,68,68,.28); /* brighter red */
+}
 
 /* ================= COLUMN WIDTHS ================= */
 #scheduleTable th:nth-child(1),#scheduleTable td:nth-child(1){width:130px;}

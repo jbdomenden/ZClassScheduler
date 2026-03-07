@@ -1,19 +1,25 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZClassScheduler</title>
 
     <!-- Core Layout -->
     <link rel="stylesheet" href="../CSS/base.css">
+    <link rel="stylesheet" href="../CSS/ManageDesign.css">
 
-    <!-- Grid + Table Styling -->
-    <link rel="stylesheet" href="../CSS/ScheduleGrid.css">
+    <!-- Table Styling -->
     <link rel="stylesheet" href="../CSS/ScheduleList.css">
 
     <!-- Page Specific -->
     <link rel="stylesheet" href="../CSS/SchedulesOverview.css">
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 
@@ -24,7 +30,7 @@
     <!-- Sidebar -->
     <aside id="global-nav" class="sidebar"></aside>
 
-    <main>
+    <main class="crud-scope no-page-scroll">
 
         <!-- Page Header -->
         <div class="page-header">
@@ -36,32 +42,34 @@
         <section class="panel">
 
             <div class="panel-header">
-                <h3>Curriculum Schedules</h3>
-
                 <!-- Search Component (Loaded from GlobalSearch.html) -->
                 <div id="searchContainer"></div>
+
+                <div class="panel-actions">
+                    <button id="refreshOverviewBtn" class="btn btn-secondary" type="button">Refresh</button>
+                </div>
             </div>
 
             <!-- Schedule Table -->
-            <div class="schedule-table">
-                    <table id="scheduleTable">
-                        <thead>
-                        <tr>
-                            <th>SECTION</th>
-                            <th>COURSE CODE</th>
-                            <th>COURSE DESCRIPTION</th>
-                            <th>DAY</th>
-                            <th COLSPAN="2">TIME</th>
-                            <th>ROOM</th>
-                            <th>INSTRUCTOR</th>
-                        </tr>
-                        </thead>
+            <div class="table-wrapper">
+                <table id="scheduleTable">
+                    <thead>
+                    <tr>
+                        <th>SECTION</th>
+                        <th>COURSE CODE</th>
+                        <th>COURSE DESCRIPTION</th>
+                        <th>DAY</th>
+                        <th colspan="2">TIME</th>
+                        <th>ROOM</th>
+                        <th>INSTRUCTOR</th>
+                    </tr>
+                    </thead>
 
-                        <tbody>
-                        <!-- Rendered dynamically by ScheduleListEngine -->
-                        </tbody>
-                    </table>
-                </div>
+                    <tbody>
+                    <!-- Rendered dynamically by ScheduleListEngine -->
+                    </tbody>
+                </table>
+            </div>
         </section>
 
     </main>

@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    STI Tertiary Scheduler
 
    - Program dropdown: Curriculums.courseCode where dept == "TERTIARY_STI" and active == true
@@ -20,12 +20,19 @@ const API = {
     curriculums: "/api/settings/curriculums",
 };
 
+const token = localStorage.getItem("token");
+function authHeaders() {
+    return token ? { "Authorization": `Bearer ${token}` } : {};
+}
+
 let blocks = [];
 let openSectionCode = null; // keep expanded section open across refresh/edit
 let rooms = [];
 let teachers = [];
 let curriculums = [];
 let searchInput = null;
+let sortKey = "courseCode";
+let sortDir = "asc";
 
 // DOM
 const blocksBody = document.querySelector("#blocksTable tbody");
@@ -65,6 +72,118 @@ function escapeHtml(str) {
         .replace(/'/g, "&#039;");
 }
 
+const ICONS = {
+    edit: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.7 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L20.7 7.04z"/></svg>`,
+    trash: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2zm1 6h2v10h-2V9zm4 0h2v10h-2V9zM7 9h2v10H7V9zm-1 14h12a2 2 0 0 0 2-2V7H4v14a2 2 0 0 0 2 2z"/></svg>`,
+    view: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>`,
+};
+
+// Time policy for the schedule grid (must match backend ScheduleTimePolicy)
+const TIME_POLICY = {
+    startMin: "07:00",
+    startMax: "20:30",
+    endMax: "21:00",
+    stepSeconds: 1800, // 30 minutes
+    allowedDurations: [60, 90, 120, 180], // minutes
+};
+
+function hhmmToMinutes(v) {
+    const s = String(v || "").trim();
+    const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+    if (!m) return null;
+    const hh = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+    return hh * 60 + mm;
+}
+
+function minutesToHHMM(total) {
+    const t = Math.max(0, Math.min(23 * 60 + 59, total | 0));
+    const hh = String(Math.floor(t / 60)).padStart(2, "0");
+    const mm = String(t % 60).padStart(2, "0");
+    return `${hh}:${mm}`;
+}
+
+function buildHalfHourRange(fromHHMM, toHHMM) {
+    const from = hhmmToMinutes(fromHHMM);
+    const to = hhmmToMinutes(toHHMM);
+    if (from == null || to == null || to < from) return [];
+
+    const stepMinutes = Math.max(1, Math.floor((TIME_POLICY.stepSeconds || 1800) / 60));
+    const out = [];
+    for (let m = from; m <= to; m += stepMinutes) out.push(minutesToHHMM(m));
+    return out;
+}
+
+function snapToHalfHour(minutes) {
+    const rem = minutes % 30;
+    if (rem === 0) return minutes;
+    const down = minutes - rem;
+    const up = minutes + (30 - rem);
+    return (minutes - down) <= (up - minutes) ? down : up;
+}
+
+function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+}
+
+function validEndTimesForStart(startHHMM) {
+    const start = hhmmToMinutes(startHHMM);
+    const endMax = hhmmToMinutes(TIME_POLICY.endMax);
+    if (start == null || endMax == null) return [];
+
+    const ends = TIME_POLICY.allowedDurations
+        .map(d => start + d)
+        .filter(end => end <= endMax)
+        .map(minutesToHHMM);
+
+    return [...new Set(ends)].sort((a, b) => (hhmmToMinutes(a) ?? 0) - (hhmmToMinutes(b) ?? 0));
+}
+
+function nearestHHMM(targetHHMM, candidates) {
+    const t = hhmmToMinutes(targetHHMM);
+    if (t == null || !candidates?.length) return candidates?.[0] ?? "";
+
+    let best = candidates[0];
+    let bestDist = Math.abs((hhmmToMinutes(best) ?? 0) - t);
+    for (const c of candidates) {
+        const cm = hhmmToMinutes(c);
+        if (cm == null) continue;
+        const d = Math.abs(cm - t);
+        if (d < bestDist) {
+            best = c;
+            bestDist = d;
+        }
+    }
+    return best;
+}
+
+function updateEditEndTimes(preferredEnd = null) {
+    if (!editEnd) return;
+    const start = (editStart?.value || "").trim();
+    const options = start ? validEndTimesForStart(start) : [];
+
+    editEnd.innerHTML =
+        `<option value="">(Unset)</option>` +
+        options.map(t => `<option value="${t}">${t}</option>`).join("");
+
+    if (preferredEnd && options.includes(preferredEnd)) editEnd.value = preferredEnd;
+    else editEnd.value = "";
+}
+
+function fillEditTimes() {
+    if (!editStart || !editEnd) return;
+
+    const starts = buildHalfHourRange(TIME_POLICY.startMin, TIME_POLICY.startMax)
+        .filter(s => validEndTimesForStart(s).length > 0);
+
+    editStart.innerHTML =
+        `<option value="">(Unset)</option>` +
+        starts.map(t => `<option value="${t}">${t}</option>`).join("");
+
+    updateEditEndTimes(null);
+}
+
 async function safeJson(res) {
     try {
         const txt = await res.text();
@@ -77,7 +196,13 @@ async function safeJson(res) {
 
 
 async function fetchJson(url, options) {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+        ...(options || {}),
+        headers: {
+            ...authHeaders(),
+            ...((options || {}).headers || {}),
+        },
+    });
 
     // Read text once; we decide how to parse
     const contentType = (res.headers.get("content-type") || "").toLowerCase();
@@ -162,7 +287,7 @@ function normalizeDept(v) {
 
 function shortDay(d) {
     const v = String(d || "").toUpperCase();
-    if (!v) return "—";
+    if (!v) return "\u2014";
     if (v.startsWith("MON")) return "MON";
     if (v.startsWith("TUE")) return "TUE";
     if (v.startsWith("WED")) return "WED";
@@ -173,7 +298,7 @@ function shortDay(d) {
 }
 
 function formatTime12h(hhmm) {
-    if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return "—";
+    if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return "\u2014";
     const [hStr, m] = hhmm.split(":");
     let h = parseInt(hStr, 10);
     const ampm = h >= 12 ? "PM" : "AM";
@@ -183,8 +308,8 @@ function formatTime12h(hhmm) {
 }
 
 function timeRange(start, end) {
-    if (!start || !end) return "—";
-    return `${formatTime12h(start)} – ${formatTime12h(end)}`;
+    if (!start || !end) return "\u2014";
+    return `${formatTime12h(start)} \u2013 ${formatTime12h(end)}`;
 }
 
 function getRoomLabel(roomId, row) {
@@ -196,9 +321,9 @@ function getRoomLabel(roomId, row) {
     }
     // Fallback: use row-provided fields if backend includes them
     if (row) {
-        return row.roomCode || row.room || row.roomName || "—";
+        return row.roomCode || row.room || row.roomName || "\u2014";
     }
-    return "—";
+    return "\u2014";
 }
 
 function getTeacherLabel(teacherId, row) {
@@ -208,14 +333,14 @@ function getTeacherLabel(teacherId, row) {
             const dept = (t.department || "").trim();
             const last = (t.lastName || "").trim();
             const first = (t.firstName || "").trim();
-            return `${dept} ${last}`.trim() || `${first} ${last}`.trim() || t.email || "—";
+            return `${dept} ${last}`.trim() || `${first} ${last}`.trim() || t.email || "\u2014";
         }
     }
     // Fallback: use row-provided fields if backend includes them
     if (row) {
-        return row.instructor || row.instructorName || row.teacherName || row.teacher || "—";
+        return row.instructor || row.instructorName || row.teacherName || row.teacher || "\u2014";
     }
-    return "—";
+    return "\u2014";
 }
 
 /* ===========================
@@ -231,6 +356,18 @@ async function loadSearchComponent() {
 
     searchInput = document.querySelector("#searchInput");
     if (searchInput) searchInput.addEventListener("input", renderBlocks);
+
+    const clearBtn = container.querySelector(".clear-btn");
+    if (clearBtn && searchInput) {
+        const sync = () => (clearBtn.style.display = searchInput.value ? "block" : "none");
+        searchInput.addEventListener("input", sync);
+        clearBtn.addEventListener("click", () => {
+            searchInput.value = "";
+            sync();
+            renderBlocks();
+        });
+        sync();
+    }
 }
 
 /* ===========================
@@ -241,7 +378,17 @@ async function loadRoomsTeachers() {
     const [r, t] = await Promise.all([fetchJson(API.rooms), fetchJson(API.teachers)]);
 
     rooms = (r || []).map(x => ({ id: x.id, code: x.code || x.name || "" }));
-    teachers = (t || []).map(x => ({
+
+    const normRole = (v) => String(v || "")
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, "_")
+        .replace(/-/g, "_");
+    const disallowed = new Set(["CHECKER", "NON_TEACHING"]);
+
+    teachers = (t || [])
+        .filter(x => !disallowed.has(normRole(x?.role)))
+        .map(x => ({
         id: x.id,
         firstName: x.firstName,
         lastName: x.lastName,
@@ -265,7 +412,7 @@ async function loadRoomsTeachers() {
 }
 
 /* ===========================
-   Curriculums → wizard dropdowns
+Curriculums - wizard dropdowns
 =========================== */
 
 async function loadCurriculums() {
@@ -313,6 +460,19 @@ function populateCurriculumOptions(programCode) {
 async function loadBlocks() {
     blocks = (await fetchJson(API.blocks)) || [];
 
+    // Frontend guard: only show blocks that belong to STI tertiary curriculums.
+    // Backend also filters, but this prevents accidental cross-scheduler bleed if APIs change.
+    const allowedCurriculumIds = new Set(
+        (curriculums || [])
+            .filter(c => c && c.active !== false)
+            .filter(c => normalizeDept(c.dept) === "TERTIARY_STI")
+            .map(c => String(c.id || "").trim())
+            .filter(Boolean)
+    );
+    if (allowedCurriculumIds.size) {
+        blocks = (blocks || []).filter(b => b && b.curriculumId && allowedCurriculumIds.has(String(b.curriculumId)));
+    }
+
     // Stable sort: subject code, then base row first, then id
     blocks.forEach(b => (b.rows || []).sort((a, b2) => {
         const c = String(a.subjectCode || "").localeCompare(String(b2.subjectCode || ""));
@@ -354,14 +514,16 @@ function renderBlocks() {
             (b.curriculumName || "").toLowerCase().includes(q)
         );
 
+    const sorted = (data || []).slice().sort(compareBlocks);
+
     blocksBody.innerHTML = "";
 
-    if (!data.length) {
+    if (!sorted.length) {
         blocksBody.innerHTML = `<tr><td colspan="6">No schedules found.</td></tr>`;
         return;
     }
 
-    data.forEach(b => {
+    sorted.forEach(b => {
         const tr = document.createElement("tr");
         tr.dataset.section = b.sectionCode;
 
@@ -376,13 +538,108 @@ function renderBlocks() {
       <td>${b.active ? "Active" : "Inactive"}</td>
       <td>
         <div style="display:flex;gap:8px;justify-content:center;">
-          <button class="btn btn-secondary" data-action="view" data-section="${escapeHtml(b.sectionCode)}">View</button>
-          <button class="btn btn-delete" data-action="delete" data-section="${escapeHtml(b.sectionCode)}">Delete</button>
+          <button class="btn btn-secondary btn-icon" data-action="view" data-section="${escapeHtml(b.sectionCode)}" title="View" aria-label="View">${ICONS.view}</button>
+          <button class="btn btn-delete btn-icon" data-action="delete" data-section="${escapeHtml(b.sectionCode)}" title="Delete" aria-label="Delete">${ICONS.trash}</button>
         </div>
       </td>
     `;
         blocksBody.appendChild(tr);
     });
+
+    // Re-open expanded block if needed (after sort/search)
+    if (openSectionCode) {
+        const block = blocks.find(b => String(b.sectionCode) === String(openSectionCode));
+        const row = [...blocksBody.querySelectorAll("tr")].find(r => String(r.dataset.section) === String(openSectionCode));
+        if (block && row) {
+            const existing = row.nextElementSibling;
+            if (!existing || !existing.classList.contains("detail-row")) {
+                const detail = document.createElement("tr");
+                detail.className = "detail-row";
+                const td = document.createElement("td");
+                td.colSpan = 6;
+                td.innerHTML = renderScheduleBlockTable(block);
+                detail.appendChild(td);
+                row.after(detail);
+                bindScheduleBlockHandlers(detail, block);
+            }
+        }
+    }
+}
+
+function normalizeSortVal(v) {
+    if (v == null) return "";
+    if (typeof v === "number") return v;
+    const s = String(v).trim();
+    const n = Number(s);
+    if (!Number.isNaN(n) && s !== "") return n;
+    return s.toLowerCase();
+}
+
+function compareBlocks(a, b) {
+    const dir = sortDir === "desc" ? -1 : 1;
+
+    const av = normalizeSortVal(a?.[sortKey]);
+    const bv = normalizeSortVal(b?.[sortKey]);
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+
+    // default tie-breakers: program -> year -> term -> section
+    const t1 = normalizeSortVal(a?.courseCode);
+    const t2 = normalizeSortVal(b?.courseCode);
+    if (t1 < t2) return -1;
+    if (t1 > t2) return 1;
+
+    const y1 = normalizeSortVal(a?.year);
+    const y2 = normalizeSortVal(b?.year);
+    if (y1 < y2) return -1;
+    if (y1 > y2) return 1;
+
+    const tr1 = normalizeSortVal(a?.term);
+    const tr2 = normalizeSortVal(b?.term);
+    if (tr1 < tr2) return -1;
+    if (tr1 > tr2) return 1;
+
+    return String(a?.sectionCode || "").localeCompare(String(b?.sectionCode || ""));
+}
+
+function updateSortUI() {
+    const table = document.getElementById("blocksTable");
+    if (!table) return;
+    table.querySelectorAll("thead th[data-key]").forEach(th => {
+        th.classList.remove("sorted", "asc", "desc");
+        if (String(th.dataset.key) === String(sortKey)) {
+            th.classList.add("sorted");
+            th.classList.add(sortDir === "asc" ? "asc" : "desc");
+        }
+    });
+}
+
+function initHeaderSort() {
+    const table = document.getElementById("blocksTable");
+    if (!table) return;
+    if (table.dataset.sortBound) return;
+    table.dataset.sortBound = "1";
+
+    table.querySelector("thead")?.addEventListener("click", (e) => {
+        const th = e.target.closest("th[data-key]");
+        if (!th) return;
+        const key = String(th.dataset.key || "");
+        if (!key) return;
+
+        if (sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
+        else {
+            sortKey = key;
+            sortDir = "asc";
+        }
+
+        updateSortUI();
+        renderBlocks();
+    });
+
+    // Default: program then year
+    sortKey = "courseCode";
+    sortDir = "asc";
+    updateSortUI();
 }
 
 blocksBody.addEventListener("click", async (e) => {
@@ -493,9 +750,9 @@ function renderScheduleBlockTable(block) {
       <td style="padding:10px;border:1px solid #666;text-align:center;">${escapeHtml(getRoomLabel(r.roomId, r))}</td>
       <td style="padding:10px;border:1px solid #666;text-align:center;">${escapeHtml(getTeacherLabel(r.teacherId, r))}</td>
       <td class="actions-cell" style="padding:10px;border:1px solid #666;text-align:center;">
-        <button class="btn btn-secondary" data-action="edit-row">EDIT</button>
+        <button class="btn btn-secondary btn-icon" data-action="edit-row" title="Edit" aria-label="Edit">${ICONS.edit}</button>
         ${isHead ? `<span class="add-row-handle" data-action="add-row" title="Add schedule row">+</span>` : ``}
-        ${r.isDuplicateRow ? `<button class="btn btn-delete dup-delete-btn" data-action="delete-row" title="Delete added row">Delete</button>` : ``}
+        ${r.isDuplicateRow ? `<button class="btn btn-delete btn-icon dup-delete-btn" data-action="delete-row" title="Delete added row" aria-label="Delete added row">${ICONS.trash}</button>` : ``}
       </td>
     `;
 
@@ -576,8 +833,10 @@ function openEditRowModal(r) {
     if (!r) return;
     editScheduleId.value = r.id;
     editDay.value = r.dayOfWeek || "";
+    // Ensure dropdowns are populated before selecting existing values.
+    fillEditTimes();
     editStart.value = r.timeStart || "";
-    editEnd.value = r.timeEnd || "";
+    updateEditEndTimes(r.timeEnd || null);
     editRoom.value = r.roomId || "";
     editTeacher.value = r.teacherId || "";
     editRowModal.classList.remove("hidden");
@@ -588,6 +847,15 @@ editCancelBtn.addEventListener("click", () => editRowModal.classList.add("hidden
 editRowForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const id = editScheduleId.value;
+
+    // Keep end options in sync with selected start.
+    updateEditEndTimes(editEnd.value || null);
+
+    // If one is set, require both (backend enforces too; this prevents confusing submissions).
+    if ((editStart.value && !editEnd.value) || (!editStart.value && editEnd.value)) {
+        alert("Please set both Time Start and Time End (or clear both).");
+        return;
+    }
 
     try {
         await fetchJson(API.updateRow(id), {
@@ -680,5 +948,9 @@ addBlockBtn.addEventListener("click", async () => {
     ensureAddRowStyles();
     await loadSearchComponent();
     await Promise.all([loadRoomsTeachers(), loadCurriculums()]);
+    initHeaderSort();
     await loadBlocks();
+
+    fillEditTimes();
+    editStart?.addEventListener("change", () => updateEditEndTimes(null));
 })();

@@ -8,6 +8,7 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.insert
+import zeroday.Controller.service.ScheduleTimePolicy
 import zeroday.Models.db.tables.Curriculums
 import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
@@ -31,6 +32,7 @@ object SchedulerSHS_Repository {
         if (allowed.isEmpty()) return@transaction emptyList()
 
         val rows = Schedules.select { (Schedules.curriculumId inList allowed) }.toList()
+        if (rows.isEmpty()) return@transaction emptyList()
 
         val subjectIds = rows.map { it[Schedules.subjectId] }.distinct()
         val subjectCodeById = Subjects
@@ -59,6 +61,10 @@ object SchedulerSHS_Repository {
                 levelIndex = first[Schedules.levelIndex],
                 active = first[Schedules.active],
                 rows = schedules.map { s ->
+                    val (ns, ne) = ScheduleTimePolicy.normalizeForReadOrReset(
+                        s[Schedules.timeStart],
+                        s[Schedules.timeEnd]
+                    )
                     TertiaryRowResponse(
                         id = s[Schedules.id].toString(),
                         subjectId = s[Schedules.subjectId].toString(),
@@ -66,15 +72,16 @@ object SchedulerSHS_Repository {
                         subjectName = s[Schedules.subjectName],
                         isElective = s[Schedules.isElective],
                         dayOfWeek = s[Schedules.dayOfWeek],
-                        timeStart = s[Schedules.timeStart]?.format(formatter),
-                        timeEnd = s[Schedules.timeEnd]?.format(formatter),
+                        timeStart = ns?.format(formatter),
+                        timeEnd = ne?.format(formatter),
                         roomId = s[Schedules.roomId]?.toString(),
                         teacherId = s[Schedules.teacherId]?.toString(),
-                        active = s[Schedules.active]
+                        active = s[Schedules.active],
+                        isDuplicateRow = s[Schedules.isDuplicateRow]
                     )
                 }
             )
-        }
+        }.sortedBy { it.sectionCode }
     }
 
     fun duplicateRow(baseId: UUID): UUID = transaction {
@@ -120,10 +127,14 @@ object SchedulerSHS_Repository {
         roomId: UUID?,
         teacherId: UUID?
     ) = transaction {
+        val parsedStart = start?.trim()?.takeIf { it.isNotBlank() }?.let { LocalTime.parse(it) }
+        val parsedEnd = end?.trim()?.takeIf { it.isNotBlank() }?.let { LocalTime.parse(it) }
+        val (ns, ne) = ScheduleTimePolicy.normalizeStrictOrNull(parsedStart, parsedEnd)
+
         Schedules.update({ Schedules.id eq id }) {
             it[dayOfWeek] = day
-            it[timeStart] = start?.let { LocalTime.parse(it) }
-            it[timeEnd] = end?.let { LocalTime.parse(it) }
+            it[timeStart] = ns
+            it[timeEnd] = ne
             it[Schedules.roomId] = roomId
             it[Schedules.teacherId] = teacherId
         }

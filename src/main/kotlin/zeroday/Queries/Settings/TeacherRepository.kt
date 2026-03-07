@@ -16,6 +16,37 @@ object TeacherRepository {
     private fun blankToNull(s: String?): String? =
         s?.trim()?.takeIf { it.isNotEmpty() }
 
+    private fun normalizeRoleForStorage(roleRaw: String?): String {
+        val r0 = (roleRaw ?: "").trim()
+        if (r0.isEmpty()) return "TEACHER"
+
+        val r = r0
+            .trim()
+            .uppercase()
+            .replace("\\s+".toRegex(), "_")
+            .replace("-", "_")
+
+        return when (r) {
+            "SUPERADMIN" -> "SUPER_ADMIN"
+            "SUPER_ADMIN" -> "SUPER_ADMIN"
+            "ADMIN" -> "ADMIN"
+            "CHECKER" -> "CHECKER"
+            "NONTEACHING" -> "NON_TEACHING"
+            "NON_TEACHING" -> "NON_TEACHING"
+            "TEACHER" -> "TEACHER"
+            "INSTRUCTOR" -> "TEACHER"
+            else -> r
+        }
+    }
+
+    private fun parseDepartments(raw: String?): Set<String> =
+        (raw ?: "")
+            .split(",", ";", "|")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .map { it.uppercase() }
+            .toSet()
+
     private fun normalizeEmail(email: String): String =
         email.trim().lowercase().replace("\\s+".toRegex(), "")
 
@@ -32,7 +63,7 @@ object TeacherRepository {
                 "name" to it[Teachers.name],
                 "department" to it[Teachers.department],
                 "email" to it[Teachers.email],
-                "role" to (it[Teachers.role] ?: "Teacher"),
+                "role" to normalizeRoleForStorage(it[Teachers.role]),
                 "status" to if (it[Teachers.active]) "Active" else "Inactive"
             )
         }
@@ -57,6 +88,7 @@ object TeacherRepository {
         }
 
         val teacherId = UUID.randomUUID()
+        val roleNorm = normalizeRoleForStorage(role)
 
         // 1) insert teacher
         Teachers.insert {
@@ -68,7 +100,7 @@ object TeacherRepository {
             it[Teachers.department] = department.trim()
             it[Teachers.email] = normalizedEmail
             it[Teachers.password] = passwordPlain
-            it[Teachers.role] = blankToNull(role) ?: "Teacher"
+            it[Teachers.role] = roleNorm
             it[Teachers.active] = active
         }
 
@@ -80,7 +112,7 @@ object TeacherRepository {
             it[UsersTable.email] = normalizedEmail
             it[UsersTable.passwordSalt] = salt
             it[UsersTable.passwordHash] = hash
-            it[UsersTable.role] = (blankToNull(role) ?: "TEACHER")
+            it[UsersTable.role] = roleNorm
         }
 
         teacherId
@@ -100,6 +132,7 @@ object TeacherRepository {
 
         val normalizedEmail = normalizeEmail(emailInput)
         val updatePassword = passwordPlain.trim().isNotEmpty()
+        val roleNorm = normalizeRoleForStorage(role)
 
         // teacher current row
         val current = Teachers.select { Teachers.id eq id }.single()
@@ -121,7 +154,7 @@ object TeacherRepository {
             it[Teachers.department] = department.trim()
             it[Teachers.email] = normalizedEmail
             if (updatePassword) it[Teachers.password] = passwordPlain
-            it[Teachers.role] = blankToNull(role) ?: "Teacher"
+            it[Teachers.role] = roleNorm
             it[Teachers.active] = active
         }
 
@@ -131,7 +164,7 @@ object TeacherRepository {
         if (existingUser != null) {
             UsersTable.update({ UsersTable.email eq oldEmail }) {
                 it[UsersTable.email] = normalizedEmail
-                it[UsersTable.role] = (blankToNull(role) ?: "TEACHER")
+                it[UsersTable.role] = roleNorm
 
                 if (updatePassword) {
                     val salt = PasswordCrypto.generateSalt()
@@ -150,7 +183,7 @@ object TeacherRepository {
                     it[UsersTable.email] = normalizedEmail
                     it[passwordSalt] = salt
                     it[passwordHash] = hash
-                    it[UsersTable.role] = (blankToNull(role) ?: "TEACHER")
+                    it[UsersTable.role] = roleNorm
                 }
             }
         }
@@ -172,5 +205,45 @@ object TeacherRepository {
         val q = Teachers.select { Teachers.email eq normalized }
         val filtered = if (excludeId == null) q else q.andWhere { Teachers.id neq excludeId }
         filtered.any()
+    }
+
+    fun findDepartmentByEmail(email: String): String? = transaction {
+        val normalized = normalizeEmail(email)
+        Teachers
+            .slice(Teachers.department)
+            .select { Teachers.email eq normalized }
+            .limit(1)
+            .singleOrNull()
+            ?.get(Teachers.department)
+    }
+
+    fun findDepartmentById(id: UUID): String? = transaction {
+        Teachers
+            .slice(Teachers.department)
+            .select { Teachers.id eq id }
+            .limit(1)
+            .singleOrNull()
+            ?.get(Teachers.department)
+    }
+
+    fun findDepartmentsByEmail(email: String): Set<String> =
+        parseDepartments(findDepartmentByEmail(email))
+
+    fun findDepartmentsById(id: UUID): Set<String> =
+        parseDepartments(findDepartmentById(id))
+
+    fun findRoleById(id: UUID): String? = transaction {
+        Teachers
+            .slice(Teachers.role)
+            .select { Teachers.id eq id }
+            .limit(1)
+            .singleOrNull()
+            ?.get(Teachers.role)
+            ?.let { normalizeRoleForStorage(it) }
+    }
+
+    fun isInstructorAssignable(teacherId: UUID): Boolean {
+        val role = findRoleById(teacherId) ?: "TEACHER"
+        return role != "CHECKER" && role != "NON_TEACHING"
     }
 }

@@ -8,6 +8,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import zeroday.Controller.auth.RealAuth
+import zeroday.Queries.Login.UserRepositoryImpl
 
 // ---------- CONFIG ----------
 
@@ -55,16 +57,48 @@ fun Route.authRoutes() {
             post("/login") {
                 try {
                     val req = call.receive<LoginWrapper>()
-                    val email = req.payload.email
+                    val email = req.payload.email.trim().lowercase()
                     val password = req.payload.password
 
-                    application.log.info("LOGIN ATTEMPT: ${email} ${password}")
+                    val auth = RealAuth(UserRepositoryImpl(), JwtService)
+                    val result = auth.login(email, password)
 
-                    call.respond(HttpStatusCode.OK)
+                    if (result == null) {
+                        call.respond(
+                            HttpStatusCode.Unauthorized,
+                            mapOf("message" to "Invalid credentials")
+                        )
+                        return@post
+                    }
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        LoginResponse(
+                            token = result.token,
+                            forcePasswordChange = false
+                        )
+                    )
 
                 } catch (e: Exception) {
                     application.log.error("LOGIN FAILED", e)
-                    call.respond(HttpStatusCode.InternalServerError, "Login failed")
+                    call.respond(HttpStatusCode.InternalServerError, mapOf("message" to "Login failed"))
+                }
+            }
+
+            authenticate("auth-jwt") {
+                get("/me") {
+                    val p = call.principal<JWTPrincipal>()
+                    val userId = p?.payload?.getClaim("userId")?.asString()
+                        ?: p?.payload?.subject
+                    val role = p?.payload?.getClaim("role")?.asString()
+                    val email = p?.payload?.getClaim("email")?.asString()
+
+                    if (userId.isNullOrBlank() || role.isNullOrBlank()) {
+                        call.respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
+                        return@get
+                    }
+
+                    call.respond(mapOf("userId" to userId, "role" to role, "email" to (email ?: "")))
                 }
             }
 
@@ -75,6 +109,10 @@ fun Route.authRoutes() {
 // ---------- SECURITY INSTALL ----------
 
 fun Application.configureSecurity() {
+    // Defensive: if routing gets initialized before this is called (or module wiring changes),
+    // Ktor will throw MissingApplicationPluginException when authenticate("auth-jwt") is used.
+    if (pluginOrNull(Authentication) != null) return
+
     install(Authentication) {
         jwt("auth-jwt") {
             realm = JwtConfig.realm

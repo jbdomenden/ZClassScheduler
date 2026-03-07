@@ -12,6 +12,14 @@ let roomDB = [];
 
 const API_BASE = "/api/settings/rooms";
 
+const token = localStorage.getItem("token");
+function authHeaders() {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+let sortKey = "floor";
+let sortDir = "asc";
+
 function uiTypeToApi(type) {
     // UI values: Lecture | Laboratory | Multipurpose
     // API enum:  LECTURE | LAB | MULTIPURPOSE
@@ -27,7 +35,12 @@ function apiTypeToUi(type) {
 }
 
 async function fetchRooms() {
-    const res = await fetch(API_BASE);
+    if (!token) {
+        window.location.href = "../HTML/Login.html";
+        return;
+    }
+
+    const res = await fetch(API_BASE, { headers: { ...authHeaders() } });
     if (!res.ok) throw new Error("Failed to load rooms");
     const data = await res.json();
     roomDB = (data || []).map(r => ({
@@ -38,7 +51,34 @@ async function fetchRooms() {
         type: apiTypeToUi(r.type),
         status: r.status || "Active",
     }));
+
+    // default sort: floor then room
+    sortKey = "floor";
+    sortDir = "asc";
+    updateSortUI();
     renderRooms();
+}
+
+function floorSortKey(value) {
+    const s = String(value || "").trim().toLowerCase();
+    if (!s) return Number.POSITIVE_INFINITY;
+
+    // Common textual floors
+    if (s === "g" || s === "gf" || s.includes("ground")) return 0;
+    if (s.startsWith("b") || s.includes("basement")) {
+        const m = s.match(/-?\\d+/);
+        const n = m ? parseInt(m[0], 10) : 1;
+        return -Math.abs(n || 1);
+    }
+
+    // Numeric floors like "1", "2nd", "3rd floor"
+    const m = s.match(/-?\\d+/);
+    if (m) return parseInt(m[0], 10);
+
+    // Unknown formats go last, but stay deterministic by string compare
+    let hash = 0;
+    for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+    return 10000 + Math.abs(hash);
 }
 
 /* =========================================================
@@ -76,6 +116,18 @@ async function loadSearchComponent() {
     if (searchInput) {
         searchInput.addEventListener("input", handleSearch);
     }
+
+    const clearBtn = document.querySelector("#searchContainer .clear-btn");
+    if (clearBtn && searchInput) {
+        const sync = () => (clearBtn.style.display = searchInput.value ? "block" : "none");
+        searchInput.addEventListener("input", sync);
+        clearBtn.addEventListener("click", () => {
+            searchInput.value = "";
+            sync();
+            handleSearch();
+        });
+        sync();
+    }
 }
 
 /* =========================================================
@@ -84,6 +136,8 @@ async function loadSearchComponent() {
 
 function renderRooms(data = roomDB) {
     tableBody.innerHTML = "";
+
+    const sorted = applySort(data);
 
     if (data.length === 0) {
         tableBody.innerHTML = `
@@ -94,7 +148,7 @@ function renderRooms(data = roomDB) {
         return;
     }
 
-    data.forEach(room => {
+    sorted.forEach(room => {
         const row = document.createElement("tr");
         row.dataset.id = room.id;
 
@@ -118,12 +172,86 @@ function renderRooms(data = roomDB) {
     });
 }
 
+function normalizeSortVal(v) {
+    if (v == null) return "";
+    if (typeof v === "number") return v;
+    const s = String(v).trim();
+    const n = Number(s);
+    if (!Number.isNaN(n) && s !== "") return n;
+    return s.toLowerCase();
+}
+
+function compareRooms(a, b) {
+    const dir = sortDir === "desc" ? -1 : 1;
+
+    function keyVal(room, key) {
+        if (key === "floor") return floorSortKey(room.floor);
+        if (key === "capacity") return normalizeSortVal(room.capacity);
+        return normalizeSortVal(room?.[key]);
+    }
+
+    const av = keyVal(a, sortKey);
+    const bv = keyVal(b, sortKey);
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+
+    // Default tie-breakers: floor -> room
+    const f1 = floorSortKey(a.floor);
+    const f2 = floorSortKey(b.floor);
+    if (f1 !== f2) return f1 - f2;
+    return String(a.code || "").localeCompare(String(b.code || ""));
+}
+
+function applySort(list) {
+    return (list || []).slice().sort(compareRooms);
+}
+
+function updateSortUI() {
+    const table = document.getElementById("roomTable");
+    if (!table) return;
+    table.querySelectorAll("thead th[data-key]").forEach(th => {
+        th.classList.remove("sorted", "asc", "desc");
+        if (String(th.dataset.key) === String(sortKey)) {
+            th.classList.add("sorted");
+            th.classList.add(sortDir === "asc" ? "asc" : "desc");
+        }
+    });
+}
+
+function initHeaderSort() {
+    const table = document.getElementById("roomTable");
+    if (!table) return;
+    if (table.dataset.sortBound) return;
+    table.dataset.sortBound = "1";
+
+    table.querySelector("thead")?.addEventListener("click", (e) => {
+        const th = e.target.closest("th[data-key]");
+        if (!th) return;
+        const key = String(th.dataset.key || "");
+        if (!key) return;
+
+        if (sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
+        else {
+            sortKey = key;
+            sortDir = "asc";
+        }
+
+        updateSortUI();
+        handleSearch();
+    });
+
+    // Default: floor then room
+    sortKey = "floor";
+    sortDir = "asc";
+    updateSortUI();
+}
+
 /* =========================================================
    SEARCH
 ========================================================= */
 
 function handleSearch() {
-    const value = searchInput.value.toLowerCase().trim();
+    const value = (searchInput?.value || "").toLowerCase().trim();
 
     const filtered = roomDB.filter(room =>
         room.code.toLowerCase().includes(value) ||
@@ -176,14 +304,14 @@ form.addEventListener("submit", (e) => {
             if (editingId) {
                 const res = await fetch(`${API_BASE}/${editingId}`, {
                     method: "PUT",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { ...authHeaders(), "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 });
                 if (!res.ok) throw new Error("Failed to update room");
             } else {
                 const res = await fetch(API_BASE, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { ...authHeaders(), "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                 });
                 if (!res.ok) throw new Error("Failed to create room");
@@ -245,7 +373,7 @@ function deleteRoom(id) {
 
     (async () => {
         try {
-            const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+            const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE", headers: { ...authHeaders() } });
             if (!res.ok) throw new Error("Failed to delete room");
             await fetchRooms();
         } catch (err) {
@@ -279,6 +407,7 @@ function closeModal() {
 ========================================================= */
 
 loadSearchComponent();
+initHeaderSort();
 fetchRooms().catch(err => {
     console.error(err);
     // Keep UX reasonable even if API is down

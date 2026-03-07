@@ -25,12 +25,22 @@ object CurriculumRepository {
 
     fun create(req: CurriculumRequest): UUID {
         val id = UUID.randomUUID()
+        val dept = normalizeDept(req.dept)
+        val name = req.name.trim()
+        val courseCode = req.courseCode.trim().uppercase()
         transaction {
+            val exists = Curriculums.select {
+                (Curriculums.name eq name) and (Curriculums.dept eq dept)
+            }.any()
+            if (exists) {
+                throw IllegalArgumentException("Curriculum code must be unique.")
+            }
+
             Curriculums.insert {
                 it[Curriculums.id] = id
-                it[Curriculums.courseCode] = req.courseCode.uppercase()
-                it[Curriculums.name] = req.name
-                it[Curriculums.dept] = normalizeDept(req.dept)
+                it[Curriculums.courseCode] = courseCode
+                it[Curriculums.name] = name
+                it[Curriculums.dept] = dept
             }
         }
         return id

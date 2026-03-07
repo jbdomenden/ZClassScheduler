@@ -1,202 +1,691 @@
-// DASHBOARD INDEX JS
-// Handles:
-// 1) Room Overview grid (rowspan-based schedule layout aligned to time start/end)
-// 2) Incomplete Schedule panel
+// Dashboard.js (module)
+// Room Overview uses the same time-slot table grid feel as SchedulesRoom,
+// but with rooms as the column headers.
 
-const API_BASE = "/api";
 const token = localStorage.getItem("token");
+const UTIL_DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+let utilMode = "day"; // "day" | "week"
 
-/**
- * Performs authenticated GET request and returns parsed JSON.
- * Adds Bearer token from localStorage.
- * Throws error if response is not OK.
- * @param {string} url
- * @returns {Promise<any>}
- */
 async function authFetchJson(url) {
-    const res = await fetch(url, {
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
-    });
+  if (!token) throw new Error("Missing token");
 
-    if (!res.ok) throw new Error("Request failed");
-    return await res.json();
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const txt = await res.text();
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try { if (txt) msg = (JSON.parse(txt)?.message || msg); } catch { if (txt) msg = txt; }
+    throw new Error(msg);
+  }
+
+  if (!txt) return null;
+  return ct.includes("application/json") ? JSON.parse(txt) : txt;
 }
 
-/**
- * Loads and renders the Room Overview table.
- * Builds a 30-minute interval grid (7:00–21:00).
- * Uses rowspan to visually span scheduled time blocks.
- */
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  })[m]);
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = value == null ? "-" : String(value);
+}
+
+function toMin(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "").trim());
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+  return h * 60 + mm;
+}
+
+function fmt(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const ap = h >= 12 ? "PM" : "AM";
+  const hr = ((h + 11) % 12) + 1;
+  return `${hr}:${String(m).padStart(2, "0")} ${ap}`;
+}
+
+function buildSlotMins(startMin = 7 * 60, endMin = 21 * 60, step = 30) {
+  const out = [];
+  for (let t = startMin; t < endMin; t += step) out.push(t);
+  return out;
+}
+
+async function loadSummary() {
+  const s = await authFetchJson("/dashboard/summary");
+  setText("kpiActiveSchedules", s?.activeSchedules);
+  setText("kpiActiveTeachers", s?.activeTeachers);
+  setText("kpiActiveRooms", s?.activeRooms);
+  setText("kpiSchedulesToday", s?.totalSchedulesToday);
+}
+
 async function loadRoomOverview() {
-    const table = document.getElementById("roomOverviewTable");
-    if (!table) return;
+  const headerRow = document.getElementById("roomOverviewHeader") || document.querySelector("#roomOverviewTable thead tr");
+  const tbody = document.getElementById("roomGrid") || document.querySelector("#roomOverviewTable tbody");
+  const title = document.getElementById("roomTitle");
+  if (!headerRow || !tbody) return;
 
-    const tbody = table.querySelector("tbody");
+  const slotMins = buildSlotMins(7 * 60, 21 * 60, 30);
+
+  const [roomsRaw, dataRaw] = await Promise.all([
+    authFetchJson("/api/settings/rooms").catch(() => []),
+    authFetchJson("/dashboard/rooms").catch(() => []),
+  ]);
+
+  const allRooms = (roomsRaw || [])
+    .filter((r) => (String(r.status || "Active").toLowerCase() === "active"))
+    .map((r) => String(r.code || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+
+  const data = (dataRaw || []).map((s) => ({
+    roomCode: String(s.roomCode || "").trim(),
+    startTime: String(s.startTime || "").trim(),
+    endTime: String(s.endTime || "").trim(),
+    subject: String(s.subject || "").trim(),
+    section: String(s.section || "").trim(),
+    teacher: String(s.teacher || "\u2014").trim(),
+  }));
+
+  const fallbackRooms = [...new Set(data.map((d) => d.roomCode).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const rooms = allRooms.length ? allRooms : fallbackRooms;
+
+  function render(roomsToShow) {
+    const cols = (roomsToShow || []).filter(Boolean);
+
+    headerRow.innerHTML =
+      `<th colspan="2">TIME</th>` +
+      cols.map((r) => `<th>${escapeHtml(r)}</th>`).join("");
+
     tbody.innerHTML = "";
 
-    const data = await authFetchJson(`${API_BASE}/dashboard/rooms`);
-
-    // Unique room list sorted alphabetically.
-    const rooms = [...new Set(data.map((d) => d.roomCode))].sort();
-
-    // Generate 30-min time slots from 07:00 to 21:00.
-    const startHour = 7;
-    const endHour = 21;
-    const interval = 30;
-
-    const times = [];
-    for (let h = startHour; h < endHour; h++) {
-        times.push(`${pad(h)}:00`);
-        times.push(`${pad(h)}:30`);
-    }
-
-    // Initialize empty grid: time -> room -> cell data.
-    const grid = {};
-    times.forEach((t) => {
-        grid[t] = {};
-        rooms.forEach((r) => (grid[t][r] = null));
+    // grid[startMin][room] = null | "skip" | { rowspan, html }
+    const grid = new Map();
+    slotMins.forEach((t) => {
+      const row = new Map();
+      cols.forEach((r) => row.set(r, null));
+      grid.set(t, row);
     });
 
-    /**
-     * Place schedules into grid:
-     * - First time slot gets actual content + rowspan
-     * - Subsequent covered slots marked as "skip"
-     */
     data.forEach((s) => {
-        const startIndex = times.indexOf(s.startTime);
-        const endIndex = times.indexOf(s.endTime);
-        if (startIndex === -1 || endIndex === -1) return;
+      if (!cols.includes(s.roomCode)) return;
+      const sm = toMin(s.startTime);
+      const em = toMin(s.endTime);
+      if (sm == null || em == null) return;
+      if (sm < 7 * 60 || em > 21 * 60) return;
+      if (sm % 30 !== 0 || em % 30 !== 0) return;
+      if (em <= sm) return;
 
-        const span = endIndex - startIndex;
+      const span = (em - sm) / 30;
+      const row = grid.get(sm);
+      if (!row) return;
 
-        grid[times[startIndex]][s.roomCode] = {
-            rowspan: span,
-            content: `
-        <div class="sched-block">
-          <div><strong>${escapeHtml(s.subject)}</strong></div>
-          <div>${escapeHtml(s.section)}</div>
-          <div>${escapeHtml(s.teacher)}</div>
-        </div>
-      `,
-        };
+      row.set(s.roomCode, {
+        rowspan: span,
+        html: `
+          <strong>${escapeHtml(s.subject || "\u2014")}</strong><br>
+          ${escapeHtml(s.section || "\u2014")}<br>
+          <span class="muted">${escapeHtml(s.teacher || "\u2014")}</span>
+        `,
+      });
 
-        for (let i = startIndex + 1; i < endIndex; i++) {
-            grid[times[i]][s.roomCode] = "skip";
+      for (let i = 1; i < span; i++) {
+        const next = grid.get(sm + i * 30);
+        if (!next) continue;
+        next.set(s.roomCode, "skip");
+      }
+    });
+
+    slotMins.forEach((t) => {
+      const tr = document.createElement("tr");
+
+      const tdStart = document.createElement("td");
+      tdStart.className = "time-col";
+      tdStart.textContent = fmt(t);
+      tr.appendChild(tdStart);
+
+      const tdEnd = document.createElement("td");
+      tdEnd.className = "time-col";
+      tdEnd.textContent = fmt(t + 30);
+      tr.appendChild(tdEnd);
+
+      const row = grid.get(t);
+      cols.forEach((room) => {
+        const cellData = row?.get(room);
+        if (cellData === "skip") return;
+
+        const td = document.createElement("td");
+        if (cellData && cellData.rowspan) {
+          td.rowSpan = cellData.rowspan;
+          td.innerHTML = cellData.html;
+          td.classList.add("occupied");
         }
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
     });
+  }
 
-    // Render table rows.
-    times.forEach((time, i) => {
-        const row = document.createElement("tr");
-
-        // TIME START column.
-        const tdStart = document.createElement("td");
-        tdStart.textContent = time;
-        row.appendChild(tdStart);
-
-        // TIME END column.
-        const tdEnd = document.createElement("td");
-        tdEnd.textContent = times[i + 1] || "";
-        row.appendChild(tdEnd);
-
-        // Room columns.
-        rooms.forEach((room) => {
-            const cellData = grid[time][room];
-            if (cellData === "skip") return;
-
-            const td = document.createElement("td");
-
-            if (cellData && cellData.rowspan > 0) {
-                td.rowSpan = cellData.rowspan;
-                td.innerHTML = cellData.content;
-                td.classList.add("occupied");
-            }
-
-            row.appendChild(td);
-        });
-
-        tbody.appendChild(row);
-    });
+  if (title) title.textContent = "Today's Room Overview";
+  render(rooms);
 }
 
-/**
- * Loads and renders the Incomplete Schedules panel.
- * Displays schedules missing day, time, teacher, or room.
- */
-async function loadIncompleteSchedules() {
-    const tbody = document.getElementById("incompleteGrid");
-    if (!tbody) return;
+function utilColorClass(percent) {
+  if (percent >= 80) return "high";
+  if (percent >= 50) return "medium";
+  return "low";
+}
 
-    tbody.innerHTML = "";
+function todayKey() {
+  const d = new Date();
+  const map = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const k = map[d.getDay()] || "MONDAY";
+  // Default to MONDAY if it's Sunday (app typically schedules Mon-Sat).
+  return (k === "SUNDAY") ? "MONDAY" : k;
+}
 
-    const data = await authFetchJson(`${API_BASE}/dashboard/incomplete`);
+function setUtilMode(mode) {
+  utilMode = (mode === "week") ? "week" : "day";
 
-    if (!data.length) {
-        tbody.innerHTML = `
-      <tr>
-        <td colspan="6" class="text-center">All schedules complete 🎉</td>
-      </tr>
-    `;
+  const btnDay = document.getElementById("utilModeDay");
+  const btnWeek = document.getElementById("utilModeWeek");
+  const daySel = document.getElementById("utilDaySelect");
+
+  if (btnDay && btnWeek) {
+    btnDay.classList.toggle("btn-primary", utilMode === "day");
+    btnDay.classList.toggle("btn-secondary", utilMode !== "day");
+
+    btnWeek.classList.toggle("btn-primary", utilMode === "week");
+    btnWeek.classList.toggle("btn-secondary", utilMode !== "week");
+  }
+
+  if (daySel) daySel.classList.toggle("is-hidden", utilMode !== "day");
+}
+
+async function loadRoomUtilization() {
+  const tbody = document.getElementById("utilizationGrid");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  const daySel = document.getElementById("utilDaySelect");
+  const day = String(daySel?.value || todayKey()).trim().toUpperCase();
+
+  const utilUrl = (utilMode === "week")
+    ? "/dashboard/rooms/utilization/week-grid"
+    : `/dashboard/rooms/utilization?day=${encodeURIComponent(day)}`;
+
+  const [utilRaw, roomsRaw] = await Promise.all([
+    authFetchJson(utilUrl).catch(() => []),
+    authFetchJson("/api/settings/rooms").catch(() => []),
+  ]);
+
+  const table = tbody.closest("table");
+  function ensureHead(cols) {
+    if (!table) return;
+    let thead = table.querySelector("thead");
+    if (!thead) {
+      thead = document.createElement("thead");
+      table.insertBefore(thead, table.firstChild);
+    }
+    thead.innerHTML = `<tr>${(cols || []).map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
+  }
+
+  const roomMeta = new Map(
+    (roomsRaw || []).map((r) => [
+      String(r.code || r.roomCode || r.name || "").trim(),
+      {
+        floor: String(r.floor || "").trim(),
+        type: String(r.type || "").trim(), // LECTURE/LAB/MULTIPURPOSE (API)
+      },
+    ])
+  );
+
+  const floorSelect = document.getElementById("utilFloorFilter");
+  const typeSelect = document.getElementById("utilTypeFilter");
+
+  // Populate filter options once.
+  if (floorSelect && floorSelect.options.length <= 1) {
+    const floors = [...new Set((roomsRaw || []).map((r) => String(r.floor || "").trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+    floors.forEach((f) => floorSelect.add(new Option(f, f)));
+  }
+  if (typeSelect && typeSelect.options.length <= 1) {
+    const types = [...new Set((roomsRaw || []).map((r) => String(r.type || "").trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+    types.forEach((t) => typeSelect.add(new Option(t, t)));
+  }
+
+  function applyFilters(list) {
+    const floor = floorSelect ? String(floorSelect.value || "").trim() : "";
+    const type = typeSelect ? String(typeSelect.value || "").trim() : "";
+
+    return (list || []).filter((r) => {
+      const meta = roomMeta.get(String(r.roomName || "").trim());
+      if (floor && String(meta?.floor || "") !== floor) return false;
+      if (type && String(meta?.type || "") !== type) return false;
+      return true;
+    });
+  }
+
+  if (utilMode === "week") {
+    const days = Array.isArray(utilRaw?.days) ? utilRaw.days : UTIL_DAYS.slice();
+    const overallByDay = (utilRaw && typeof utilRaw === "object" && utilRaw.overallByDay) ? utilRaw.overallByDay : {};
+    const overallTotal = Number(utilRaw?.overallTotal) || 0;
+
+    const rows = (Array.isArray(utilRaw?.rooms) ? utilRaw.rooms : []).map((r) => ({
+      roomName: String(r?.roomName || "").trim(),
+      byDay: (r && typeof r === "object" && r.byDay) ? r.byDay : {},
+      total: Number(r?.total) || 0,
+    })).filter((r) => r.roomName);
+
+    function renderWeek(list) {
+      const filtered = applyFilters(list);
+      ensureHead(["Room", ...days.map((d) => String(d).slice(0, 3)), "Total"]);
+      tbody.innerHTML = "";
+
+      if (!filtered.length) {
+        tbody.innerHTML = `<tr><td class="muted">No utilization data.</td></tr>`;
         return;
+      }
+
+      const overallRow = document.createElement("tr");
+      overallRow.className = "overall-row";
+      overallRow.innerHTML =
+        `<td>Overall</td>` +
+        days.map((d) => {
+          const pct = Number(overallByDay?.[d]) || 0;
+          return `<td style="white-space:nowrap;">${pct}%</td>`;
+        }).join("") +
+        `<td style="white-space:nowrap;">${overallTotal}%</td>`;
+      tbody.appendChild(overallRow);
+
+      filtered
+        .slice()
+        .sort((a, b) => String(a.roomName || "").localeCompare(String(b.roomName || "")))
+        .forEach((r) => {
+          const tr = document.createElement("tr");
+
+          const tds = [];
+          tds.push(`<td>${escapeHtml(r.roomName)}</td>`);
+          days.forEach((d) => {
+            const pct = Number(r.byDay?.[d]) || 0;
+            tds.push(`
+              <td style="min-width:72px;">
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="white-space:nowrap;">${pct}%</div>
+                  <div class="util-bar"><div class="util-fill ${utilColorClass(pct)}" style="width:${pct}%"></div></div>
+                </div>
+              </td>
+            `);
+          });
+
+          const total = Number(r.total) || 0;
+          tds.push(`
+            <td style="min-width:88px;">
+              <div style="display:flex;flex-direction:column;gap:6px;">
+                <div style="white-space:nowrap;font-weight:800;">${total}%</div>
+                <div class="util-bar"><div class="util-fill ${utilColorClass(total)}" style="width:${total}%"></div></div>
+              </div>
+            </td>
+          `);
+
+          tr.innerHTML = tds.join("");
+          tbody.appendChild(tr);
+        });
     }
 
-    data.forEach((s) => {
+    if (floorSelect && !floorSelect.dataset.bound) {
+      floorSelect.dataset.bound = "1";
+      floorSelect.addEventListener("change", () => renderWeek(rows));
+    }
+    if (typeSelect && !typeSelect.dataset.bound) {
+      typeSelect.dataset.bound = "1";
+      typeSelect.addEventListener("change", () => renderWeek(rows));
+    }
+
+    renderWeek(rows);
+    return;
+  }
+
+  // Day mode: list
+  const data = (utilRaw || []).map((r) => ({
+    roomName: String(r.roomName || "").trim(),
+    utilizationPercent: Number(r.utilizationPercent) || 0,
+  }));
+
+  function render(list) {
+    ensureHead(["Room", "%", "Utilization"]);
+    tbody.innerHTML = "";
+
+    const filtered = applyFilters(list);
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td class="muted">No utilization data.</td></tr>`;
+      return;
+    }
+
+    // Overall should disregard unused rooms (0%).
+    const used = filtered.filter((r) => (Number(r.utilizationPercent) || 0) > 0);
+    const avg = used.length
+      ? Math.round(used.reduce((acc, r) => acc + (Number(r.utilizationPercent) || 0), 0) / used.length)
+      : 0;
+
+    const overall = document.createElement("tr");
+    overall.className = "overall-row";
+    overall.innerHTML = `
+      <td>Overall</td>
+      <td style="white-space:nowrap;">${avg}%</td>
+      <td>
+        <div class="util-bar">
+          <div class="util-fill ${utilColorClass(avg)}" style="width:${avg}%"></div>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(overall);
+
+    filtered
+      .slice()
+      .sort((a, b) => String(a.roomName || "").localeCompare(String(b.roomName || "")))
+      .forEach((r) => {
+        const pct = Number(r.utilizationPercent) || 0;
         const tr = document.createElement("tr");
         tr.innerHTML = `
-      <td>${escapeHtml(s.subject)}</td>
-      <td>${escapeHtml(s.section)}</td>
-      <td>${badge(s.day)}</td>
-      <td>${badge(s.time)}</td>
-      <td>${badge(s.teacher)}</td>
-      <td>${badge(s.room)}</td>
-    `;
+          <td>${escapeHtml(r.roomName || "")}</td>
+          <td style="white-space:nowrap;">${pct}%</td>
+          <td>
+            <div class="util-bar">
+              <div class="util-fill ${utilColorClass(pct)}" style="width:${pct}%"></div>
+            </div>
+          </td>
+        `;
         tbody.appendChild(tr);
-    });
+      });
+  }
+
+  // Bind once; re-render on changes.
+  if (floorSelect && !floorSelect.dataset.bound) {
+    floorSelect.dataset.bound = "1";
+    floorSelect.addEventListener("change", () => render(data));
+  }
+  if (typeSelect && !typeSelect.dataset.bound) {
+    typeSelect.dataset.bound = "1";
+    typeSelect.addEventListener("change", () => render(data));
+  }
+
+  render(data);
 }
 
-/**
- * Returns a styled badge.
- * If value is missing/null, shows "Missing" badge.
- * @param {string|null|undefined} value
- * @returns {string} HTML string
- */
 function badge(value) {
-    if (!value) return `<span class="badge-missing">Missing</span>`;
-    return escapeHtml(value);
+  if (!value) return `<span class="badge bad">Missing</span>`;
+  return `<span class="badge">${escapeHtml(value)}</span>`;
 }
 
-/**
- * Pads a number with leading zero (e.g., 7 -> "07").
- * @param {number} n
- * @returns {string}
- */
-function pad(n) {
-    return n.toString().padStart(2, "0");
-}
+async function loadIncompleteSchedules() {
+  const tbody = document.getElementById("incompleteGrid");
+  if (!tbody) return;
 
-/**
- * Escapes HTML special characters to prevent XSS.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/[&<>"']/g, function (m) {
-        return {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#039;",
-        }[m];
+  tbody.innerHTML = "";
+  const data = (await authFetchJson("/dashboard/incomplete?limit=200")) || [];
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="muted">All schedules complete.</td></tr>`;
+    return;
+  }
+
+  // Group by section with expandable details (grouped by subject).
+  const sections = new Map();
+  data.forEach((s) => {
+    const section = String(s.section || "").trim() || "\u2014";
+    if (!sections.has(section)) {
+      sections.set(section, {
+        section,
+        items: [],
+        rows: 0,
+        missingDay: 0,
+        missingTime: 0,
+        missingTeacher: 0,
+        missingRoom: 0,
+      });
+    }
+
+    const g = sections.get(section);
+    g.items.push({
+      subject: String(s.subject || "").trim() || "\u2014",
+      day: s.day ? String(s.day).trim() : "",
+      time: s.time ? String(s.time).trim() : "",
+      teacher: s.teacher ? String(s.teacher).trim() : "",
+      room: s.room ? String(s.room).trim() : "",
     });
+
+    g.rows += 1;
+    if (!s.day) g.missingDay += 1;
+    if (!s.time) g.missingTime += 1;
+    if (!s.teacher) g.missingTeacher += 1;
+    if (!s.room) g.missingRoom += 1;
+  });
+
+  function renderMissingBadges(row) {
+    const out = [];
+    if (!row.day) out.push(`<span class="badge bad">Missing Day</span>`);
+    if (!row.time) out.push(`<span class="badge bad">Missing Time</span>`);
+    if (!row.teacher) out.push(`<span class="badge bad">Missing Teacher</span>`);
+    if (!row.room) out.push(`<span class="badge bad">Missing Room</span>`);
+    return out.join(" ");
+  }
+
+  function renderDetail(sectionGroup) {
+    const bySubject = new Map();
+    (sectionGroup.items || []).forEach((it) => {
+      const key = it.subject || "\u2014";
+      if (!bySubject.has(key)) bySubject.set(key, []);
+      bySubject.get(key).push(it);
+    });
+
+    const subjects = [...bySubject.keys()].sort((a, b) => String(a).localeCompare(String(b)));
+    const body = subjects.map((subject) => {
+      const items = (bySubject.get(subject) || []).slice().sort((a, b) => {
+        const ad = String(a.day || "");
+        const bd = String(b.day || "");
+        if (ad !== bd) return ad.localeCompare(bd);
+        return String(a.time || "").localeCompare(String(b.time || ""));
+      });
+
+      const span = Math.max(1, items.length);
+      return items.map((x, idx) => `
+        <tr>
+          ${idx === 0 ? `<td rowspan="${span}"><strong>${escapeHtml(subject)}</strong></td>` : ``}
+          <td>${escapeHtml(x.day || "\u2014")}</td>
+          <td>${escapeHtml(x.time || "\u2014")}</td>
+          <td>${escapeHtml(x.room || "\u2014")}</td>
+          <td>${escapeHtml(x.teacher || "\u2014")}</td>
+        </tr>
+      `).join("");
+    }).join("");
+
+    return `
+      <div class="incomplete-detail">
+        <div class="detail-title">Missing details</div>
+        <div class="detail-table-wrap">
+          <table class="detail-table">
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Room</th>
+                <th>Teacher</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${body || `<tr><td colspan="5" class="muted">No details.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  const ordered = [...sections.values()].sort((a, b) => a.section.localeCompare(b.section));
+  ordered.forEach((g) => {
+    const sectionId = `sec_${btoa(unescape(encodeURIComponent(g.section))).replace(/=+$/g, "")}`;
+
+    const tr = document.createElement("tr");
+    tr.className = "incomplete-section-row";
+    tr.dataset.section = g.section;
+    tr.dataset.detailId = sectionId;
+    tr.innerHTML = `
+      <td class="toggle-cell">
+        <button class="expand-btn" type="button" aria-expanded="false" aria-controls="${escapeHtml(sectionId)}">+</button>
+      </td>
+      <td><strong>${escapeHtml(g.section)}</strong></td>
+      <td>${g.rows}</td>
+      <td>${g.missingDay}</td>
+      <td>${g.missingTime}</td>
+      <td>${g.missingTeacher}</td>
+      <td>${g.missingRoom}</td>
+    `;
+    tbody.appendChild(tr);
+
+    const detail = document.createElement("tr");
+    detail.className = "incomplete-detail-row is-hidden";
+    detail.id = sectionId;
+    detail.innerHTML = `<td colspan="7">${renderDetail(g)}</td>`;
+    tbody.appendChild(detail);
+  });
+
+  // One click handler for toggling.
+  if (!tbody.dataset.bound) {
+    tbody.dataset.bound = "1";
+    tbody.addEventListener("click", (e) => {
+      const row = e.target.closest("tr.incomplete-section-row");
+      if (!row) return;
+
+      const btn = row.querySelector(".expand-btn");
+      if (!btn) return;
+
+      const detailId = row.dataset.detailId;
+      if (!detailId) return;
+
+      // Close others for cleanliness.
+      tbody.querySelectorAll("tr.incomplete-detail-row").forEach((r) => {
+        if (r.id !== detailId) r.classList.add("is-hidden");
+      });
+      tbody.querySelectorAll("tr.incomplete-section-row .expand-btn").forEach((b) => {
+        if (b !== btn) {
+          b.setAttribute("aria-expanded", "false");
+          b.textContent = "+";
+        }
+      });
+
+      const detailRow = document.getElementById(detailId);
+      const isOpen = detailRow && !detailRow.classList.contains("is-hidden");
+      if (detailRow) detailRow.classList.toggle("is-hidden", isOpen);
+
+      btn.setAttribute("aria-expanded", isOpen ? "false" : "true");
+      btn.textContent = isOpen ? "+" : "\u2212";
+    });
+  }
 }
 
-// Initialize dashboard modules on DOM ready.
-document.addEventListener("DOMContentLoaded", () => {
-    loadRoomOverview();
-    loadIncompleteSchedules();
-});
+async function loadConflicts() {
+  const container = document.getElementById("conflictsGrid");
+  if (!container) return;
+
+  container.classList.add("muted");
+  container.textContent = "Loading...";
+
+  const data = (await authFetchJson("/dashboard/conflicts?limit=500")) || [];
+  if (!data.length) {
+    container.textContent = "No conflicts detected.";
+    return;
+  }
+
+  container.classList.remove("muted");
+  container.innerHTML = data.map((c) => {
+      const priority = escapeHtml(c.priority || "");
+      const msg = escapeHtml(c.message || "");
+      const ts = escapeHtml(c.timestamp || "");
+      return `
+        <div class="conflict">
+          <strong>${priority || "Conflict"}</strong><br />
+          ${msg}<br />
+          <span class="muted">${ts}</span>
+        </div>
+      `;
+    }).join("");
+}
+
+async function init() {
+  if (!token) {
+    // Keep it simple: redirect to login if dashboard is opened without auth.
+    window.location.href = "../HTML/Login.html";
+    return;
+  }
+
+  try {
+    // Room utilization controls
+    const btnDay = document.getElementById("utilModeDay");
+    const btnWeek = document.getElementById("utilModeWeek");
+    const daySel = document.getElementById("utilDaySelect");
+
+    if (daySel) {
+      // Populate and set default selection
+      if (!daySel.value) daySel.value = todayKey();
+      if (!UTIL_DAYS.includes(daySel.value)) daySel.value = "MONDAY";
+    }
+
+    // Default mode: per-day
+    setUtilMode("day");
+
+    if (btnDay && !btnDay.dataset.bound) {
+      btnDay.dataset.bound = "1";
+      btnDay.addEventListener("click", () => {
+        setUtilMode("day");
+        loadRoomUtilization();
+      });
+    }
+    if (btnWeek && !btnWeek.dataset.bound) {
+      btnWeek.dataset.bound = "1";
+      btnWeek.addEventListener("click", () => {
+        setUtilMode("week");
+        loadRoomUtilization();
+      });
+    }
+    if (daySel && !daySel.dataset.bound) {
+      daySel.dataset.bound = "1";
+      daySel.addEventListener("change", () => {
+        if (utilMode === "day") loadRoomUtilization();
+      });
+    }
+
+    await loadSummary();
+    await Promise.all([
+      loadRoomOverview(),
+      loadRoomUtilization(),
+      loadIncompleteSchedules(),
+      loadConflicts(),
+    ]);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);

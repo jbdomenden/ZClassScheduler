@@ -36,6 +36,7 @@ object DatabaseFactory {
                 Rooms,
                 RoomBlocks,
                 AuditLogs,
+                CheckerLogs,
                 Teachers
             )
         }

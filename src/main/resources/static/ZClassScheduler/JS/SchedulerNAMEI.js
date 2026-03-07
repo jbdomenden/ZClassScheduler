@@ -1,4 +1,4 @@
-
+﻿
 /* =============================================================================================
    NAMEI TERTIARY SCHEDULER (DB-backed)
    - Blocks list (from backend)
@@ -64,15 +64,122 @@ function escapeHtml(s) {
     .replace(/'/g, "&#039;");
 }
 
+const ICONS = {
+  edit: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.8 9.95l-3.75-3.75L3 17.25zm2.92 2.33H5v-.92l8.06-8.06.92.92L5.92 19.58zM20.7 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75L20.7 7.04z"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h5v2H3V5h5l1-2zm1 6h2v10h-2V9zm4 0h2v10h-2V9zM7 9h2v10H7V9zm-1 14h12a2 2 0 0 0 2-2V7H4v14a2 2 0 0 0 2 2z"/></svg>`,
+  view: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-7 0-11 7-11 7s4 7 11 7 11-7 11-7-4-7-11-7zm0 12a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>`,
+};
+
+function normalizeSortVal(v) {
+  if (v == null) return "";
+  if (typeof v === "number") return v;
+  const s = String(v).trim();
+  const n = Number(s);
+  if (!Number.isNaN(n) && s !== "") return n;
+  return s.toLowerCase();
+}
+
+function compareBlocks(a, b) {
+  const dir = sortDir === "desc" ? -1 : 1;
+
+  const av = normalizeSortVal(a?.[sortKey]);
+  const bv = normalizeSortVal(b?.[sortKey]);
+  if (av < bv) return -1 * dir;
+  if (av > bv) return 1 * dir;
+
+  // Default tie-breakers: program -> year -> term -> section
+  const p1 = normalizeSortVal(a?.courseCode);
+  const p2 = normalizeSortVal(b?.courseCode);
+  if (p1 < p2) return -1;
+  if (p1 > p2) return 1;
+
+  const y1 = normalizeSortVal(a?.year);
+  const y2 = normalizeSortVal(b?.year);
+  if (y1 < y2) return -1;
+  if (y1 > y2) return 1;
+
+  const t1 = normalizeSortVal(a?.term);
+  const t2 = normalizeSortVal(b?.term);
+  if (t1 < t2) return -1;
+  if (t1 > t2) return 1;
+
+  return String(a?.sectionCode || "").localeCompare(String(b?.sectionCode || ""));
+}
+
+function updateSortUI() {
+  const table = document.getElementById("blocksTable");
+  if (!table) return;
+  table.querySelectorAll("thead th[data-key]").forEach((th) => {
+    th.classList.remove("sorted", "asc", "desc");
+    if (String(th.dataset.key) === String(sortKey)) {
+      th.classList.add("sorted");
+      th.classList.add(sortDir === "asc" ? "asc" : "desc");
+    }
+  });
+}
+
+function initHeaderSort() {
+  const table = document.getElementById("blocksTable");
+  if (!table) return;
+  if (table.dataset.sortBound) return;
+  table.dataset.sortBound = "1";
+
+  table.querySelector("thead")?.addEventListener("click", (e) => {
+    const th = e.target.closest("th[data-key]");
+    if (!th) return;
+    const key = String(th.dataset.key || "");
+    if (!key) return;
+
+    if (sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
+    else {
+      sortKey = key;
+      sortDir = "asc";
+    }
+
+    updateSortUI();
+    renderBlocks();
+  });
+
+  // Default: program then year
+  sortKey = "courseCode";
+  sortDir = "asc";
+  updateSortUI();
+}
+
+async function loadSearchComponent() {
+  const container = document.getElementById("searchContainer");
+  if (!container) return;
+
+  const res = await fetch("../HTML/GlobalSearch.html");
+  container.innerHTML = await res.text();
+
+  searchInput = document.querySelector("#searchInput");
+  if (searchInput) searchInput.addEventListener("input", renderBlocks);
+
+  const clearBtn = container.querySelector(".clear-btn");
+  if (clearBtn && searchInput) {
+    const sync = () => (clearBtn.style.display = searchInput.value ? "block" : "none");
+    searchInput.addEventListener("input", sync);
+    clearBtn.addEventListener("click", () => {
+      searchInput.value = "";
+      sync();
+      renderBlocks();
+    });
+    sync();
+  }
+}
+
 let blocks = [];
 let openSectionCode = null;
 let rooms = [];
 let teachers = [];
 let courses = [];
 let curriculums = [];
+let sortKey = "courseCode";
+let sortDir = "asc";
 
 const blocksBody = document.querySelector("#blocksTable tbody");
-const searchInput = document.getElementById("searchInput");
+let searchInput = null;
 const refreshBtn = document.getElementById("refreshBtn");
 const addBtn = document.getElementById("addScheduleBtn");
 
@@ -98,7 +205,7 @@ let editingRowId = null;
 
 function shortDay(day) {
   const d = String(day || "").toUpperCase();
-  if (!d) return "—";
+  if (!d) return "\u2014";
   if (d.startsWith("MON")) return "MON";
   if (d.startsWith("TUE")) return "TUE";
   if (d.startsWith("WED")) return "WED";
@@ -110,37 +217,68 @@ function shortDay(day) {
 }
 
 function timeRange(s, e) {
-  if (!s || !e) return "—";
+  if (!s || !e) return "\u2014";
   return `${s} - ${e}`;
 }
 
 function getRoomLabel(roomId) {
-  if (!roomId) return "—";
+  if (!roomId) return "\u2014";
   const r = rooms.find(x => x.id === roomId);
-  return r ? (r.roomCode || r.name || r.id) : "—";
+  return r ? (r.code || r.roomCode || r.name || r.id) : "\u2014";
+}
+
+function teacherLabel(t) {
+  if (!t) return "";
+  const dept = String(t.department || "").trim();
+  const last = String(t.lastName || "").trim();
+  const first = String(t.firstName || "").trim();
+  const full = String(t.name || t.fullName || "").trim();
+  return (`${dept} ${last}`.trim()) || (`${first} ${last}`.trim()) || full || String(t.email || "").trim() || String(t.id || "");
 }
 
 function getTeacherLabel(teacherId) {
-  if (!teacherId) return "—";
+  if (!teacherId) return "\u2014";
   const t = teachers.find(x => x.id === teacherId);
-  return t ? (t.name || t.fullName || t.id) : "—";
+  return t ? (teacherLabel(t) || t.id) : "\u2014";
 }
 
-function injectAddRowCss() {
-  const css = `
-    tr.subject-head { position: relative; }
-    tr.subject-head .add-row-handle {
-      position:absolute; left:50%; bottom:-1px; transform:translate(-50%,50%);
-      width:24px; height:24px; border-radius:999px;
-      background:#1e3a8a; color:#fff; display:none;
-      align-items:center; justify-content:center;
-      font-weight:800; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.25);
-      z-index:5;
-    }
-    tr.subject-head:hover .add-row-handle{ display:inline-flex; }
-  `;
+function ensureAddRowStyles() {
+  if (document.getElementById("stiAddRowStyles")) return;
   const style = document.createElement("style");
-  style.textContent = css;
+  style.id = "stiAddRowStyles";
+  style.textContent = `
+/* Hover + add-row handle on subject head row bottom border */
+.sti-sched-table tr.subject-head { }
+.sti-sched-table tr.subject-head:hover .add-row-handle { display: inline-flex; }
+.sti-sched-table .actions-cell { position: relative; }
+.sti-sched-table .add-row-handle{
+  position:absolute;
+  left:50%;
+  bottom:-1px;
+  transform:translate(-50%, 50%);
+  width:24px;
+  height:24px;
+  border-radius:999px;
+  background:#1e3a8a;
+  color:#fff;
+  font-size:16px;
+  font-weight:800;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(0,0,0,.25);
+  user-select:none;
+  z-index:5;
+}
+.sti-sched-table .add-row-handle:hover{
+  background:#2563eb;
+  transform:translate(-50%, 50%) scale(1.08);
+}
+.sti-sched-table .dup-delete-btn{
+  margin-left:8px;
+}
+`;
   document.head.appendChild(style);
 }
 
@@ -197,9 +335,9 @@ wizardForm?.addEventListener("submit", async (e) => {
 
 function renderBlocks() {
   const q = (searchInput?.value || "").trim().toLowerCase();
-  const list = !q ? blocks : blocks.filter(b =>
+  const list = (!q ? blocks : blocks.filter(b =>
     String(b.sectionCode || "").toLowerCase().includes(q)
-  );
+  )).slice().sort(compareBlocks);
 
   blocksBody.innerHTML = "";
 
@@ -212,14 +350,19 @@ function renderBlocks() {
     const tr = document.createElement("tr");
     tr.dataset.section = b.sectionCode;
     tr.innerHTML = `
-      <td>${escapeHtml(b.sectionCode)}</td>
+      <td>
+        <div style="font-weight:600;">${escapeHtml(b.sectionCode)}</div>
+        <div style="font-size:12px;opacity:.8;">${escapeHtml(b.curriculumName || "")}</div>
+      </td>
       <td>${escapeHtml(b.courseCode)}</td>
       <td>${escapeHtml(b.year)}</td>
       <td>${escapeHtml(b.term)}</td>
       <td>${b.active ? "Active" : "Inactive"}</td>
       <td>
-        <button class="btn btn-secondary" data-action="view" data-section="${escapeHtml(b.sectionCode)}">View</button>
-        <button class="btn btn-danger" data-action="delete" data-section="${escapeHtml(b.sectionCode)}">Delete</button>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn btn-secondary btn-icon" data-action="view" data-section="${escapeHtml(b.sectionCode)}" title="View" aria-label="View">${ICONS.view}</button>
+          <button class="btn btn-delete btn-icon" data-action="delete" data-section="${escapeHtml(b.sectionCode)}" title="Delete" aria-label="Delete">${ICONS.trash}</button>
+        </div>
       </td>
     `;
     blocksBody.appendChild(tr);
@@ -229,6 +372,11 @@ function renderBlocks() {
 function renderScheduleBlockTable(block) {
   const rows = block.rows || [];
   const sectionRowspan = rows.length || 1;
+
+  const sectionCell = `
+    <div style="text-transform:uppercase;font-weight:600;">${escapeHtml(block.sectionCode || "")}</div>
+    <div style="font-size:12px;opacity:.85;">${escapeHtml(block.curriculumName || "")}</div>
+  `;
 
   const keyOf = (r) => String(r.subjectCode || "") + "||" + String(r.subjectName || "");
   const countByKey = new Map();
@@ -241,20 +389,21 @@ function renderScheduleBlockTable(block) {
   });
 
   let html = `
-    <table class="nested-table" style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th>SECTION</th>
-          <th>COURSE CODE</th>
-          <th>COURSE DESCRIPTION</th>
-          <th>DAY</th>
-          <th>TIME</th>
-          <th>ROOM</th>
-          <th>INSTRUCTOR</th>
-          <th>ACTIONS</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div style="margin:10px 0;">
+      <table class="sti-sched-table" style="width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;border-radius:10px;">
+        <thead>
+          <tr style="background:#f1f1f1;">
+            <th style="padding:10px;border:1px solid #999;">SECTION</th>
+            <th style="padding:10px;border:1px solid #999;">COURSE CODE</th>
+            <th style="padding:10px;border:1px solid #999;">COURSE DESCRIPTION</th>
+            <th style="padding:10px;border:1px solid #999;">DAY</th>
+            <th style="padding:10px;border:1px solid #999;">TIME</th>
+            <th style="padding:10px;border:1px solid #999;">ROOM</th>
+            <th style="padding:10px;border:1px solid #999;">INSTRUCTOR</th>
+            <th style="padding:10px;border:1px solid #999;">ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
   `;
 
   rows.forEach((r, idx) => {
@@ -262,33 +411,33 @@ function renderScheduleBlockTable(block) {
     const isHead = firstIdxByKey.get(k) === idx;
     const subjectSpan = countByKey.get(k) || 1;
 
-    html += `<tr class="sched-row ${isHead ? "subject-head" : ""}" data-id="${escapeHtml(r.id)}">`;
+    html += `<tr class="sched-row ${isHead ? "subject-head" : ""}" data-id="${escapeHtml(r.id)}" style="background:#c9f7b6;">`;
 
     if (idx === 0) {
-      html += `<td rowspan="${sectionRowspan}">${escapeHtml(block.sectionCode)}</td>`;
+      html += `<td rowspan="${sectionRowspan}" style="padding:10px;border:1px solid #666;vertical-align:middle;">${sectionCell}</td>`;
     }
 
     if (isHead) {
-      html += `<td rowspan="${subjectSpan}">${escapeHtml(r.subjectCode)}</td>`;
-      html += `<td rowspan="${subjectSpan}">${escapeHtml(r.subjectName)}</td>`;
+      html += `<td rowspan="${subjectSpan}" style="padding:10px;border:1px solid #666;vertical-align:middle;">${escapeHtml(r.subjectCode || "") || "&nbsp;"}</td>`;
+      html += `<td rowspan="${subjectSpan}" style="padding:10px;border:1px solid #666;vertical-align:middle;">${escapeHtml(r.subjectName || "") || "&nbsp;"}</td>`;
     }
 
     html += `
-      <td style="text-align:center;">${escapeHtml(shortDay(r.dayOfWeek))}</td>
-      <td style="text-align:center;">${escapeHtml(timeRange(r.timeStart, r.timeEnd))}</td>
-      <td style="text-align:center;">${escapeHtml(getRoomLabel(r.roomId))}</td>
-      <td style="text-align:center;">${escapeHtml(getTeacherLabel(r.teacherId))}</td>
-      <td style="text-align:center;">
-        <button class="btn btn-secondary" data-action="edit-row">EDIT</button>
-        ${isHead ? `<span class="add-row-handle" data-action="add-row" title="Add row">+</span>` : ""}
-        ${r.isDuplicateRow ? `<button class="btn btn-danger" data-action="delete-row">Delete</button>` : ""}
+      <td style="padding:10px;border:1px solid #666;text-align:center;">${escapeHtml(shortDay(r.dayOfWeek))}</td>
+      <td style="padding:10px;border:1px solid #666;text-align:center;">${escapeHtml(timeRange(r.timeStart, r.timeEnd))}</td>
+      <td style="padding:10px;border:1px solid #666;text-align:center;">${escapeHtml(getRoomLabel(r.roomId))}</td>
+      <td style="padding:10px;border:1px solid #666;text-align:center;">${escapeHtml(getTeacherLabel(r.teacherId))}</td>
+      <td class="actions-cell" style="padding:10px;border:1px solid #666;text-align:center;">
+        <button class="btn btn-secondary btn-icon" data-action="edit-row" title="Edit" aria-label="Edit">${ICONS.edit}</button>
+        ${isHead ? `<span class="add-row-handle" data-action="add-row" title="Add schedule row">+</span>` : ``}
+        ${r.isDuplicateRow ? `<button class="btn btn-delete btn-icon dup-delete-btn" data-action="delete-row" title="Delete added row" aria-label="Delete added row">${ICONS.trash}</button>` : ``}
       </td>
     `;
 
     html += `</tr>`;
   });
 
-  html += `</tbody></table>`;
+  html += `</tbody></table></div>`;
   return html;
 }
 
@@ -343,7 +492,7 @@ function openEditModal(block, rowId) {
 
   daySelect.value = row.dayOfWeek || "";
   timeStartSelect.value = row.timeStart || "";
-  timeEndSelect.value = row.timeEnd || "";
+  updateEndTimes(row.timeEnd || null);
   roomSelect.value = row.roomId || "";
   instructorSelect.value = row.teacherId || "";
 
@@ -427,40 +576,125 @@ blocksBody?.addEventListener("click", async (e) => {
 });
 
 function fillRooms() {
-  roomSelect.innerHTML = `<option value="">—</option>`;
+  roomSelect.innerHTML = `<option value="">(Unset)</option>`;
   rooms.forEach(r => {
-    const label = r.roomCode || r.name || r.id;
+    const label = r.code || r.roomCode || r.name || r.id;
     roomSelect.innerHTML += `<option value="${escapeHtml(r.id)}">${escapeHtml(label)}</option>`;
   });
 }
 
 function fillTeachers() {
-  instructorSelect.innerHTML = `<option value="">—</option>`;
+  instructorSelect.innerHTML = `<option value="">(Unset)</option>`;
   teachers.forEach(t => {
-    const label = t.name || t.fullName || t.id;
+    const label = teacherLabel(t) || t.id;
     instructorSelect.innerHTML += `<option value="${escapeHtml(t.id)}">${escapeHtml(label)}</option>`;
   });
 }
 
+
+// Time policy for the schedule grid (must match backend ScheduleTimePolicy)
+const TIME_POLICY = {
+  startMin: "07:00",
+  startMax: "20:30",
+  endMax: "21:00",
+  stepMinutes: 30,
+  allowedDurations: [60, 90, 120, 180],
+};
+
+function hhmmToMinutes(v) {
+  const s = String(v || "").trim();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+  if (!m) return null;
+  const hh = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+  return hh * 60 + mm;
+}
+
+function minutesToHHMM(total) {
+  const t = Math.max(0, Math.min(23 * 60 + 59, total | 0));
+  const hh = String(Math.floor(t / 60)).padStart(2, "0");
+  const mm = String(t % 60).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function buildHalfHourRange(fromHHMM, toHHMM) {
+  const from = hhmmToMinutes(fromHHMM);
+  const to = hhmmToMinutes(toHHMM);
+  if (from == null || to == null || to < from) return [];
+
+  const out = [];
+  for (let m = from; m <= to; m += TIME_POLICY.stepMinutes) out.push(minutesToHHMM(m));
+  return out;
+}
+
+function buildEndTimesForStart(startHHMM) {
+  const start = hhmmToMinutes(startHHMM);
+  const endMax = hhmmToMinutes(TIME_POLICY.endMax);
+  if (start == null || endMax == null) return [];
+
+  const ends = TIME_POLICY.allowedDurations
+    .map(d => start + d)
+    .filter(end => end <= endMax)
+    .map(minutesToHHMM);
+
+  return [...new Set(ends)].sort((a, b) => (hhmmToMinutes(a) ?? 0) - (hhmmToMinutes(b) ?? 0));
+}
+
+function updateEndTimes(preferredEnd = null) {
+  if (!timeEndSelect) return;
+
+  const start = (timeStartSelect?.value || "").trim();
+  const options = start ? buildEndTimesForStart(start) : [];
+
+  timeEndSelect.innerHTML =
+    `<option value="">(Unset)</option>` +
+    options.map(t => `<option value="${t}">${t}</option>`).join("");
+
+  if (preferredEnd && options.includes(preferredEnd)) timeEndSelect.value = preferredEnd;
+  else timeEndSelect.value = "";
+}
+
 function fillTimes() {
-  // 7:00 to 19:00 in 30 min
-  const times = [];
-  for (let h=7; h<=19; h++) {
-    for (let m=0; m<60; m+=30) {
-      const hh = String(h).padStart(2,"0");
-      const mm = String(m).padStart(2,"0");
-      times.push(`${hh}:${mm}`);
-    }
+  // Start times: only those that can produce at least one acceptable end time.
+  // (e.g. if endMax is 21:00 and min duration is 60 mins, 20:30 should not appear.)
+  const starts = buildHalfHourRange(TIME_POLICY.startMin, TIME_POLICY.startMax)
+    .filter(s => buildEndTimesForStart(s).length > 0);
+  if (timeStartSelect) {
+    timeStartSelect.innerHTML =
+      `<option value="">(Unset)</option>` +
+      starts.map(t => `<option value="${t}">${t}</option>`).join("");
   }
-  timeStartSelect.innerHTML = `<option value="">—</option>` + times.map(t=>`<option value="${t}">${t}</option>`).join("");
-  timeEndSelect.innerHTML = `<option value="">—</option>` + times.map(t=>`<option value="${t}">${t}</option>`).join("");
+  updateEndTimes(null);
 }
 
 async function loadLookups() {
-  try { courses = (await fetchJson(API.courses)) || []; } catch { courses = []; }
-  try { curriculums = (await fetchJson(API.curriculums)) || []; } catch { curriculums = []; }
-  try { rooms = (await fetchJson(API.rooms)) || []; } catch { rooms = []; }
-  try { teachers = (await fetchJson(API.teachers)) || []; } catch { teachers = []; }
+  try { courses = (await fetchJson(API.courses)) || []; } catch (e) { console.warn("load courses failed:", e); courses = []; }
+  try { curriculums = (await fetchJson(API.curriculums)) || []; } catch (e) { console.warn("load curriculums failed:", e); curriculums = []; }
+  try {
+    const raw = (await fetchJson(API.rooms)) || [];
+    rooms = raw.map(r => ({ ...r, code: r.code || r.roomCode || r.name || "" }));
+  } catch (e) {
+    console.warn("load rooms failed:", e);
+    rooms = [];
+  }
+  try {
+    const raw = (await fetchJson(API.teachers)) || [];
+
+    const normRole = (v) => String(v || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "_")
+      .replace(/-/g, "_");
+    const disallowed = new Set(["CHECKER", "NON_TEACHING"]);
+
+    teachers = raw
+      .filter(t => !disallowed.has(normRole(t?.role)))
+      .map(t => ({ ...t }));
+  } catch (e) {
+    console.warn("load teachers failed:", e);
+    teachers = [];
+  }
 
   fillRooms();
   fillTeachers();
@@ -468,6 +702,18 @@ async function loadLookups() {
 
 async function loadBlocks() {
   blocks = (await fetchJson(API.blocks)) || [];
+
+  // Frontend guard: only show blocks created for NAMEI tertiary curriculums.
+  const allowedCurriculumIds = new Set(
+    (curriculums || [])
+      .filter(c => c && c.active !== false && c.dept === "TERTIARY_NAMEI")
+      .map(c => String(c.id || "").trim())
+      .filter(Boolean)
+  );
+  if (allowedCurriculumIds.size) {
+    blocks = (blocks || []).filter(b => b && b.curriculumId && allowedCurriculumIds.has(String(b.curriculumId)));
+  }
+
   renderBlocks();
 
   // re-open expanded
@@ -488,10 +734,15 @@ async function loadBlocks() {
 }
 
 refreshBtn?.addEventListener("click", loadBlocks);
-searchInput?.addEventListener("input", renderBlocks);
 
-(function init() {
-  injectAddRowCss();
+(async function init() {
+  ensureAddRowStyles();
   fillTimes();
-  loadLookups().finally(loadBlocks);
+  timeStartSelect?.addEventListener("change", () => updateEndTimes(null));
+  await loadSearchComponent();
+  await loadLookups();
+  initHeaderSort();
+  await loadBlocks();
 })();
+
+

@@ -11,6 +11,8 @@
 import { createSearchDropdown } from "./base.js";
 import { renderSchedule } from "./ScheduleGridEngine.js";
 
+const token = localStorage.getItem("token");
+
 const API = {
   blocks: [
     "/api/scheduler/jhs/blocks",
@@ -21,9 +23,18 @@ const API = {
   teachers: "/api/settings/teachers",
   rooms: "/api/settings/rooms",
 };
+function blockSectionLabel(block) {
+  // Tertiary/SHS/NAMEI: sectionCode; JHS: section
+  return String(block?.sectionCode || block?.section || "").trim();
+}
 
 async function fetchJson(url) {
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json",
+    },
+  });
   if (!res.ok) throw new Error(`Request failed: ${res.status} ${res.statusText}`);
   return await res.json();
 }
@@ -52,7 +63,7 @@ function toUiDay(day) {
 function toHHMM(value) {
   if (!value) return "";
   let s = String(value).trim();
-  s = s.split(/\s*[-–—]\s*/)[0].trim();
+  s = s.split(/\s*[-\u2013\u2014]\s*/)[0].trim();
 
   let m = s.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
   if (m) return `${m[1].padStart(2, "0")}:${m[2]}`;
@@ -92,11 +103,97 @@ function isGridAligned(startHHMM, endHHMM) {
 }
 
 function teacherFullName(t) {
-  if (!t) return "—";
+  if (!t) return "\u2014";
   const dept = (t.department || "").trim();
   const fn = (t.firstName || "").trim();
   const ln = (t.lastName || "").trim();
-  return `${dept} ${fn} ${ln}`.replace(/\s+/g, " ").trim() || "—";
+  return `${dept} ${fn} ${ln}`.replace(/\s+/g, " ").trim() || "\u2014";
+}
+
+function toMin(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || "").trim());
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  if (!Number.isFinite(h) || !Number.isFinite(mm)) return null;
+  return h * 60 + mm;
+}
+
+function markConflicts(entries) {
+  const enriched = (entries || [])
+    .map((e, idx) => ({
+      idx,
+      day: String(e.day || "").trim(),
+      room: String(e.room || "").trim(),
+      teacher: String(e.teacherName || "").trim(),
+      section: String(e.section || "").trim(),
+      code: String(e.code || "").trim(),
+      start: String(e.start || "").trim(),
+      end: String(e.end || "").trim(),
+      sm: toMin(e.start),
+      em: toMin(e.end),
+    }))
+    .filter((e) => e.day && e.sm != null && e.em != null && e.em > e.sm);
+
+  const conflictIdx = new Set();
+  const remarks = new Map(); // idx -> Set<string>
+
+  function addRemark(idx, msg) {
+    if (!remarks.has(idx)) remarks.set(idx, new Set());
+    remarks.get(idx).add(msg);
+  }
+
+  function labelOf(e) {
+    const parts = [];
+    if (e.section) parts.push(e.section);
+    if (e.code) parts.push(e.code);
+    return parts.join(" ").trim() || "Schedule";
+  }
+
+  function sweep(kind, keyFn) {
+    const map = new Map();
+    enriched.forEach((e) => {
+      const k = keyFn(e);
+      if (!k) return;
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(e);
+    });
+
+    map.forEach((list) => {
+      list.sort((a, b) => a.sm - b.sm);
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i];
+        for (let j = i + 1; j < list.length && list[j].sm < a.em; j++) {
+          const b = list[j];
+          if (a.sm < b.em && b.sm < a.em) {
+            conflictIdx.add(a.idx);
+            conflictIdx.add(b.idx);
+
+            if (kind === "ROOM") {
+              addRemark(a.idx, `Room conflict (${a.day} ${a.room}): overlaps ${labelOf(b)} ${b.start}-${b.end} (Teacher: ${b.teacher || "\u2014"})`);
+              addRemark(b.idx, `Room conflict (${b.day} ${b.room}): overlaps ${labelOf(a)} ${a.start}-${a.end} (Teacher: ${a.teacher || "\u2014"})`);
+            } else if (kind === "TEACHER") {
+              addRemark(a.idx, `Teacher conflict (${a.day} ${a.teacher}): overlaps ${labelOf(b)} ${b.start}-${b.end} (Room: ${b.room || "\u2014"})`);
+              addRemark(b.idx, `Teacher conflict (${b.day} ${b.teacher}): overlaps ${labelOf(a)} ${a.start}-${a.end} (Room: ${a.room || "\u2014"})`);
+            } else if (kind === "SECTION") {
+              addRemark(a.idx, `Section conflict (${a.day} ${a.section}): overlaps ${labelOf(b)} ${b.start}-${b.end}`);
+              addRemark(b.idx, `Section conflict (${b.day} ${b.section}): overlaps ${labelOf(a)} ${a.start}-${a.end}`);
+            }
+          }
+        }
+      }
+    });
+  }
+
+  sweep("ROOM", (e) => (e.room ? `${e.day}|ROOM|${e.room}` : null));
+  sweep("TEACHER", (e) => (e.teacher ? `${e.day}|TEACHER|${e.teacher}` : null));
+  sweep("SECTION", (e) => (e.section ? `${e.day}|SECTION|${e.section}` : null));
+
+  return (entries || []).map((e, idx) => ({
+    ...e,
+    conflict: conflictIdx.has(idx),
+    conflictRemarks: remarks.has(idx) ? [...remarks.get(idx)].join("\n") : "",
+  }));
 }
 
 /* =============================================================================================
@@ -115,14 +212,14 @@ async function loadSectionScheduleData() {
 
   // Unique section list across all blocks
   const sections = [...new Set((blocksRaw || [])
-    .map((b) => (b.sectionCode ? String(b.sectionCode).trim() : ""))
+    .map((b) => blockSectionLabel(b))
     .filter(Boolean)
   )].sort((a, b) => a.localeCompare(b));
 
   const entries = [];
 
   (blocksRaw || []).forEach((block) => {
-    const section = block.sectionCode ? String(block.sectionCode).trim() : null;
+    const section = blockSectionLabel(block) || null;
     if (!section) return;
 
     (block.rows || []).forEach((row) => {
@@ -133,7 +230,7 @@ async function loadSectionScheduleData() {
       if (!isGridAligned(start, end)) return;
 
       const teacher = row.teacherId ? teacherById.get(String(row.teacherId)) : null;
-      const room = row.roomId ? (roomCodeById.get(String(row.roomId)) || "—") : "—";
+      const room = row.roomId ? (roomCodeById.get(String(row.roomId)) || "\u2014") : "\u2014";
 
       entries.push({
         day,
@@ -143,14 +240,14 @@ async function loadSectionScheduleData() {
 
         section,
 
-        code: row.subjectCode || "—",
+        code: row.subjectCode || "\u2014",
         room,
         teacherName: teacherFullName(teacher),
       });
     });
   });
 
-  return { sections, entries };
+  return { sections, entries: markConflicts(entries) };
 }
 
 /* =============================================================================================
@@ -159,6 +256,7 @@ async function loadSectionScheduleData() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const title = document.getElementById("sectionTitle");
+  document.getElementById("printBtn")?.addEventListener("click", () => window.print());
 
   renderSchedule("sectionGrid", [], () => "");
 

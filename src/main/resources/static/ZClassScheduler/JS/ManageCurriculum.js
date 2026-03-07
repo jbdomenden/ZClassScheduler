@@ -19,8 +19,17 @@ const API_BASE = "/api/settings/curriculums";
 let curriculumDB = []; // populated from backend
 let deleteMode = false;
 
+const token = localStorage.getItem("token");
+function authHeaders() {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+let sortKey = "dept";
+let sortDir = "asc";
+
 const tableBody = document.querySelector("#curriculumListTable tbody");
 const uploadBtn = document.getElementById("uploadBtn");
+const manualCreateBtn = document.getElementById("manualCreateBtn");
 const deleteModeBtn = document.getElementById("deleteModeBtn");
 
 // Search
@@ -34,6 +43,19 @@ const pdfInput = document.getElementById("pdfInput");
 const curriculumCodeInput = document.getElementById("curriculumCode");
 const deptSelect = document.getElementById("deptSelect");
 const programPreview = document.getElementById("programPreview");
+
+// Manual create modal
+const manualCreateModal = document.getElementById("manualCreateModal");
+const manualCloseBtn = document.getElementById("manualCloseBtn");
+const manualCreateForm = document.getElementById("manualCreateForm");
+const manualDeptSelect = document.getElementById("manualDeptSelect");
+const manualCourseCode = document.getElementById("manualCourseCode");
+const manualCurriculumCode = document.getElementById("manualCurriculumCode");
+const manualTemplateBtn = document.getElementById("manualTemplateBtn");
+const manualAddRowBtn = document.getElementById("manualAddRowBtn");
+const manualSubjectsTbody = document.querySelector("#manualSubjectsTable tbody");
+
+let manualSubjects = [];
 
 /* ============================
    PARSE/UPLOAD PROGRESS OVERLAY
@@ -114,7 +136,13 @@ async function safeJson(res) {
 }
 
 async function fetchJson(url, options) {
-    const res = await fetch(url, options);
+    const res = await fetch(url, {
+        ...(options || {}),
+        headers: {
+            ...authHeaders(),
+            ...((options || {}).headers || {}),
+        },
+    });
     if (!res.ok) {
         const body = await safeJson(res);
         const msg = body?.message || `${res.status} ${res.statusText}`;
@@ -127,6 +155,10 @@ async function fetchJson(url, options) {
 
 async function apiGetCurriculums() {
     return fetchJson(API_BASE);
+}
+
+async function apiGetCourses() {
+    return fetchJson("/api/settings/courses");
 }
 
 async function apiSetCurriculumStatus(id, active) {
@@ -154,6 +186,95 @@ async function apiHardDeleteCurriculum(id) {
 }
 
 /* ============================
+   MANUAL CREATE HELPERS
+============================ */
+
+function yearTermChoicesForDept(deptRaw) {
+    const d = String(deptRaw || "").trim().toUpperCase();
+    const max = (d === "JHS" || d === "SHS") ? 4 : 8;
+    return Array.from({ length: max }, (_, i) => String(i + 1));
+}
+
+function ensureManualRow(idx) {
+    if (!manualSubjects[idx]) manualSubjects[idx] = { yearTerm: "1", code: "", name: "" };
+    const r = manualSubjects[idx];
+    r.yearTerm = String(r.yearTerm || "1").trim() || "1";
+    r.code = String(r.code || "").trim();
+    r.name = String(r.name || "").trim();
+    return r;
+}
+
+function renderManualSubjects() {
+    if (!manualSubjectsTbody) return;
+
+    const dept = String(manualDeptSelect?.value || "").trim();
+    const choices = yearTermChoicesForDept(dept);
+
+    if (!manualSubjects.length) {
+        manualSubjectsTbody.innerHTML = `<tr><td colspan="4" class="muted">No subjects yet. Click "Create Template" or "Add Subject Row".</td></tr>`;
+        return;
+    }
+
+    manualSubjectsTbody.innerHTML = manualSubjects.map((row, idx) => {
+        const r = ensureManualRow(idx);
+        const opts = choices.map((c) => `<option value="${escapeHtml(c)}" ${String(r.yearTerm) === String(c) ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
+
+        return `
+<tr data-idx="${idx}">
+  <td>
+    <select data-field="yearTerm" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;width:100%;">
+      ${opts}
+    </select>
+  </td>
+  <td>
+    <input data-field="code" value="${escapeHtml(r.code)}" placeholder="e.g. CITE1004" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%;" />
+  </td>
+  <td>
+    <input data-field="name" value="${escapeHtml(r.name)}" placeholder="e.g. Introduction to Computing" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%;" />
+  </td>
+  <td style="text-align:center;">
+    <button type="button" class="btn btn-delete btn-icon" data-remove="${idx}" aria-label="Remove row">x</button>
+  </td>
+</tr>`;
+    }).join("");
+
+    if (!manualSubjectsTbody.dataset.bound) {
+        manualSubjectsTbody.dataset.bound = "1";
+
+        manualSubjectsTbody.addEventListener("click", (e) => {
+            const btn = e.target.closest("button[data-remove]");
+            if (!btn) return;
+            const idx = parseInt(btn.getAttribute("data-remove"), 10);
+            if (!Number.isFinite(idx)) return;
+            manualSubjects.splice(idx, 1);
+            renderManualSubjects();
+        });
+
+        manualSubjectsTbody.addEventListener("input", (e) => {
+            const tr = e.target.closest("tr[data-idx]");
+            if (!tr) return;
+            const idx = parseInt(tr.getAttribute("data-idx"), 10);
+            if (!Number.isFinite(idx)) return;
+            const field = e.target.getAttribute("data-field");
+            if (!field) return;
+            const r = ensureManualRow(idx);
+            r[field] = String(e.target.value || "");
+        });
+
+        manualSubjectsTbody.addEventListener("change", (e) => {
+            const tr = e.target.closest("tr[data-idx]");
+            if (!tr) return;
+            const idx = parseInt(tr.getAttribute("data-idx"), 10);
+            if (!Number.isFinite(idx)) return;
+            const field = e.target.getAttribute("data-field");
+            if (!field) return;
+            const r = ensureManualRow(idx);
+            r[field] = String(e.target.value || "");
+        });
+    }
+}
+
+/* ============================
    SEARCH COMPONENT
 ============================ */
 
@@ -166,6 +287,18 @@ async function loadSearchComponent() {
 
     searchInput = document.querySelector("#searchInput");
     if (searchInput) searchInput.addEventListener("input", renderCurriculumList);
+
+    const clearBtn = container.querySelector(".clear-btn");
+    if (clearBtn && searchInput) {
+        const sync = () => (clearBtn.style.display = searchInput.value ? "block" : "none");
+        searchInput.addEventListener("input", sync);
+        clearBtn.addEventListener("click", () => {
+            searchInput.value = "";
+            sync();
+            renderCurriculumList();
+        });
+        sync();
+    }
 }
 
 /* ============================
@@ -191,13 +324,77 @@ function deptLabel(v) {
     return x || "—";
 }
 
+function normalizeSortVal(v) {
+    if (v == null) return "";
+    if (typeof v === "number") return v;
+    const s = String(v).trim();
+    const n = Number(s);
+    if (!Number.isNaN(n) && s !== "") return n;
+    return s.toLowerCase();
+}
+
+function compareCurriculums(a, b) {
+    const dir = sortDir === "desc" ? -1 : 1;
+    const av = normalizeSortVal(a?.[sortKey]);
+    const bv = normalizeSortVal(b?.[sortKey]);
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+
+    // Default tie-breakers: dept -> program -> curriculumCode
+    const d = normalizeSortVal(a?.dept).localeCompare(normalizeSortVal(b?.dept));
+    if (d !== 0) return d;
+    const p = normalizeSortVal(a?.program).localeCompare(normalizeSortVal(b?.program));
+    if (p !== 0) return p;
+    return normalizeSortVal(a?.curriculumCode).localeCompare(normalizeSortVal(b?.curriculumCode));
+}
+
+function updateSortUI() {
+    const table = document.getElementById("curriculumListTable");
+    if (!table) return;
+    table.querySelectorAll("thead th[data-key]").forEach(th => {
+        th.classList.remove("sorted", "asc", "desc");
+        if (String(th.dataset.key) === String(sortKey)) {
+            th.classList.add("sorted");
+            th.classList.add(sortDir === "asc" ? "asc" : "desc");
+        }
+    });
+}
+
+function initHeaderSort() {
+    const table = document.getElementById("curriculumListTable");
+    if (!table) return;
+    if (table.dataset.sortBound) return;
+    table.dataset.sortBound = "1";
+
+    table.querySelector("thead")?.addEventListener("click", (e) => {
+        const th = e.target.closest("th[data-key]");
+        if (!th) return;
+        const key = String(th.dataset.key || "");
+        if (!key) return;
+
+        if (sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
+        else {
+            sortKey = key;
+            sortDir = "asc";
+        }
+
+        updateSortUI();
+        renderCurriculumList();
+    });
+
+    // Default: department then program
+    sortKey = "dept";
+    sortDir = "asc";
+    updateSortUI();
+}
+
 function renderCurriculumList() {
     const q = (searchInput?.value || "").trim().toLowerCase();
-    const list = !q ? curriculumDB : curriculumDB.filter(c =>
+    const list = (!q ? curriculumDB : curriculumDB.filter(c =>
         String(c.curriculumCode || "").toLowerCase().includes(q) ||
         String(c.program || "").toLowerCase().includes(q) ||
         String(c.dept || "").toLowerCase().includes(q)
-    );
+    )).slice().sort(compareCurriculums);
 
     tableBody.innerHTML = "";
 
@@ -469,6 +666,147 @@ uploadBtn.addEventListener("click", async () => {
 closeUploadModalBtn.addEventListener("click", () => {
     uploadModal.classList.add("hidden");
 });
+
+/* ============================
+   MANUAL CREATE MODAL
+============================ */
+
+function openManualCreateModal() {
+    if (!manualCreateModal) return;
+    manualCreateModal.classList.remove("hidden");
+}
+
+function closeManualCreateModal() {
+    if (!manualCreateModal) return;
+    manualCreateModal.classList.add("hidden");
+}
+
+async function loadManualCourses() {
+    if (!manualCourseCode) return;
+    if (manualCourseCode.dataset.loaded === "1") return;
+
+    const courses = await apiGetCourses().catch(() => []);
+    const items = (courses || [])
+        .map((c) => ({
+            code: String(c?.code || "").trim().toUpperCase(),
+            name: String(c?.name || "").trim(),
+            active: String(c?.status || "Active").trim().toLowerCase() === "active"
+        }))
+        .filter((c) => c.code)
+        .sort((a, b) => a.code.localeCompare(b.code));
+
+    manualCourseCode.innerHTML = `<option value="" disabled selected>Select Program</option>` +
+        items.map((c) => {
+            const label = c.name ? `${c.code} - ${c.name}` : c.code;
+            return `<option value="${escapeHtml(c.code)}">${escapeHtml(label)}${c.active ? "" : " (Inactive)"}</option>`;
+        }).join("");
+
+    manualCourseCode.dataset.loaded = "1";
+}
+
+function syncManualControls() {
+    const dept = String(manualDeptSelect?.value || "").trim();
+    const enabled = !!dept;
+    if (manualTemplateBtn) manualTemplateBtn.disabled = !enabled;
+    if (manualAddRowBtn) manualAddRowBtn.disabled = !enabled;
+}
+
+if (manualCreateBtn) {
+    manualCreateBtn.addEventListener("click", async () => {
+        if (manualCreateForm) manualCreateForm.reset();
+        manualSubjects = [];
+        renderManualSubjects();
+        syncManualControls();
+
+        await loadManualCourses();
+        openManualCreateModal();
+        if (manualDeptSelect) manualDeptSelect.focus();
+    });
+}
+
+if (manualCloseBtn) {
+    manualCloseBtn.addEventListener("click", () => {
+        closeManualCreateModal();
+    });
+}
+
+if (manualDeptSelect) {
+    manualDeptSelect.addEventListener("change", () => {
+        syncManualControls();
+        // Re-render to update year/term choices when switching departments.
+        if (manualSubjects.length) renderManualSubjects();
+    });
+}
+
+if (manualTemplateBtn) {
+    manualTemplateBtn.addEventListener("click", () => {
+        const dept = String(manualDeptSelect?.value || "").trim();
+        if (!dept) {
+            alert("Please select a Department first.");
+            return;
+        }
+
+        const yt = yearTermChoicesForDept(dept);
+        manualSubjects = yt.map((v) => ({ yearTerm: v, code: "", name: "" }));
+        renderManualSubjects();
+    });
+}
+
+if (manualAddRowBtn) {
+    manualAddRowBtn.addEventListener("click", () => {
+        const dept = String(manualDeptSelect?.value || "").trim();
+        if (!dept) {
+            alert("Please select a Department first.");
+            return;
+        }
+        manualSubjects.push({ yearTerm: "1", code: "", name: "" });
+        renderManualSubjects();
+    });
+}
+
+if (manualCreateForm) {
+    manualCreateForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const dept = String(manualDeptSelect?.value || "").trim();
+        const courseCode = String(manualCourseCode?.value || "").trim().toUpperCase();
+        const code = String(manualCurriculumCode?.value || "").trim();
+
+        if (!dept) return overlayError("Select a Department first.");
+        if (!courseCode) return overlayError("Select a Program first.");
+        if (!code) return overlayError("Curriculum Code is required.");
+
+        const subjects = (manualSubjects || [])
+            .map((r) => ({
+                code: String(r.code || "").trim(),
+                name: String(r.name || "").trim(),
+                yearTerm: String(r.yearTerm || "").trim(),
+            }))
+            .filter((r) => r.code && r.name && r.yearTerm);
+
+        if (!subjects.length) {
+            overlayError("Add at least one subject (code, name, and year/term).");
+            return;
+        }
+
+        try {
+            await apiUploadCurriculum({
+                courseCode,
+                name: code,
+                dept,
+                subjects,
+            });
+
+            overlaySuccess("Curriculum created.", async () => {
+                closeManualCreateModal();
+                await loadCurriculums();
+            });
+        } catch (err) {
+            console.error(err);
+            overlayError(err?.message || "Create failed.");
+        }
+    });
+}
 
 // Department must be selected before choosing a file / auto-detection
 if (deptSelect) {
@@ -1029,7 +1367,12 @@ function escapeHtml(str) {
 }
 
 (async function init() {
+    if (!token) {
+        window.location.href = "../HTML/Login.html";
+        return;
+    }
     await loadSearchComponent();
+    initHeaderSort();
     await loadCurriculums();
 })().catch(err => {
     console.error(err);

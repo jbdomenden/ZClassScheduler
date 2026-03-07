@@ -7,6 +7,7 @@ import zeroday.Models.db.bootstrap.SuperAdminBootstrap
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.plugins.contentnegotiation.*
 import zeroday.Queries.Login.UserRepositoryImpl
+import zeroday.Controller.auth.configureSecurity
 import zeroday.Routes.configureRouting
 
 fun main(args: Array<String>) {
@@ -20,5 +21,9 @@ fun Application.module() {
     SuperAdminBootstrap.init(userRepository)
 
     install(ContentNegotiation) { json() }
+
+    // Must be installed before any routes use authenticate("auth-jwt")
+    configureSecurity()
+
     configureRouting()
 }

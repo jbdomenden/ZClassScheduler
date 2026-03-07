@@ -1,9 +1,11 @@
 <!-- Hamburger button: toggles sidebar visibility (handled in GlobalSidebar.js) -->
-<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<button id="sidebarToggle" class="btn btn-ghost btn-icon hamburger" type="button" aria-label="Toggle sidebar">&#9776;</button>
 
-<!-- Application logo / title -->
-<div class="logo">ZeroDay Scheduling</div>
+<!-- Brand (icon + title). Icon uses the same .ico as the browser tab for a unified identity. -->
+<a class="brand" href="Dashboard.html" aria-label="Go to dashboard">
+    <img class="app-icon" src="../Assets/zclassscheduler.ico" alt="" />
+    <div class="logo">ZeroDay Scheduling</div>
+</a>
 
 <!-- Logout button -->
-<button id=logoutBtn" onclick="logout()">Logout</button>
-
+<button id="logoutBtn" class="btn btn-ghost" type="button">Logout</button>

@@ -1,14 +1,23 @@
 // Initialize UI behavior once the DOM is ready (ensures elements exist before querying).
-document.addEventListener("DOMContentLoaded", () => {
+function hideSplash() {
     const splash = document.getElementById("splashScreen");
+    if (!splash) return;
 
-    // Fade out the splash overlay shortly after initial load.
-    // IMPORTANT: Timeouts align with CSS transition timing for smooth visual state changes.
-    if (splash) {
-        setTimeout(() => splash.classList.remove("overlay--visible"), 450);
-        // After the fade transition, mark as hidden for accessibility and to stop interaction capture.
-        setTimeout(() => splash.setAttribute("aria-hidden", "true"), 750);
-    }
+    splash.classList.remove("overlay--visible");
+
+    // After the fade transition, fully hide to prevent accidental click-capture.
+    setTimeout(() => {
+        splash.setAttribute("aria-hidden", "true");
+        splash.style.display = "none";
+    }, 260);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Hide when the page is actually loaded (CSS/fonts/images), not on a fixed timer.
+    window.addEventListener("load", hideSplash, { once: true });
+
+    // Failsafe: don't get stuck if the load event is delayed or interrupted.
+    setTimeout(hideSplash, 2500);
 });
 
 /**
@@ -53,13 +62,42 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         });
 
         if (res.ok) {
-            // Store current user identity for role-based sidebar (nav.js resolves role via /api/settings/teachers)
-            // IMPORTANT: role is derived from Manage Teachers record of this email.
+            const data = await res.json().catch(() => null);
+            const token = data?.token;
+            if (!token) {
+                alert("Login succeeded, but no token was returned. Please contact the administrator.");
+                return;
+            }
+
+            localStorage.setItem("token", String(token));
+
+            // Store current user identity for role-based sidebar (sidebar resolves role by email).
             localStorage.setItem("currentUserEmail", String(payload.email || "").trim().toLowerCase());
-            // Clear any stale role; it will be re-resolved on next page load
             localStorage.removeItem("role");
 
-            // Redirect on successful login (server indicates success via HTTP status).
+            // Decide landing page based on JWT role.
+            // Teachers should land on schedules; admins/super admins land on dashboard.
+            try {
+                const meRes = await fetch("/api/auth/me", {
+                    headers: {
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${token}`,
+                    }
+                });
+                if (meRes.ok) {
+                    const me = await meRes.json().catch(() => null);
+                    const role = String(me?.role || "").trim().toUpperCase().replace(/\s+/g, "_");
+                    if (role) localStorage.setItem("role", role);
+
+                    if (role === "TEACHER") {
+                        window.location.href = "/ZClassScheduler/html/SchedulesOverview.html";
+                        return;
+                    }
+                }
+            } catch (_) {
+                // fall through
+            }
+
             window.location.href = "/ZCSDash";
             return;
         }

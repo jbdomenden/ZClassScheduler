@@ -1,6 +1,5 @@
 package zeroday.Controller.auth
 
-import zeroday.Controller.auth.JwtConfig.secret
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import zeroday.Queries.Login.UserRepository
@@ -15,18 +14,23 @@ data class AuthResult(
 )
 object JwtService{
 
-    private val algorithm = Algorithm.HMAC256(secret)
+    private val algorithm = Algorithm.HMAC256(JwtConfig.secret)
 
     fun generateToken(
         userId: String,
-        role: String
+        role: String,
+        email: String
     ): String {
 
         return JWT.create()
+            .withIssuer(JwtConfig.issuer)
+            .withAudience(JwtConfig.audience)
             .withSubject(userId)
+            .withClaim("userId", userId)
             .withClaim("role", role)
+            .withClaim("email", email)
             .withIssuedAt(Date.from(Instant.now()))
-            .withExpiresAt(Date.from(Instant.now().plusSeconds(60 * 60 * 8))) // 8h
+            .withExpiresAt(Date.from(Instant.now().plusMillis(JwtConfig.validityMs)))
             .sign(algorithm)
     }
 }
@@ -53,7 +57,8 @@ class RealAuth(
         // ✅ Use Long directly (simpler, safer)
         val token = jwtService.generateToken(
             userId = user.id.toString(),
-            role = user.role
+            role = user.role,
+            email = user.email
         )
 
         return AuthResult(

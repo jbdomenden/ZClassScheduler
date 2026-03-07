@@ -123,6 +123,11 @@ const API_BASE = "/api/settings/courses";
 
 let courseDB = [];
 
+const token = localStorage.getItem("token");
+function authHeaders() {
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 const tableBody = document.querySelector("#courseTable tbody");
 const modal = document.getElementById("courseModal");
 const form = document.getElementById("courseForm");
@@ -141,7 +146,11 @@ let editingId = null;
 /* ================= API ================= */
 
 async function apiList() {
-    const res = await fetch(API_BASE);
+    if (!token) {
+        window.location.href = "../HTML/Login.html";
+        return [];
+    }
+    const res = await fetch(API_BASE, { headers: { ...authHeaders() } });
     if (!res.ok) throw new Error("Failed to load courses");
     return res.json();
 }
@@ -149,7 +158,7 @@ async function apiList() {
 async function apiCreate(payload) {
     const res = await fetch(API_BASE, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
 
@@ -164,7 +173,7 @@ async function apiCreate(payload) {
 async function apiUpdate(id, payload) {
     const res = await fetch(`${API_BASE}/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
 
@@ -178,14 +187,14 @@ async function apiUpdate(id, payload) {
 async function apiSetStatus(id, active) {
     const res = await fetch(`${API_BASE}/${id}/status`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ active }),
     });
     if (!res.ok) throw new Error("Failed to update status");
 }
 
 async function apiDelete(id) {
-    const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+    const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE", headers: { ...authHeaders() } });
     if (!res.ok) throw new Error("Failed to delete course");
 }
 
@@ -206,6 +215,26 @@ async function loadSearchComponent() {
 
     searchInput = document.querySelector("#searchInput");
     if (searchInput) searchInput.addEventListener("input", handleSearch);
+
+    const clearBtn = container.querySelector(".clear-btn");
+    if (clearBtn && searchInput) {
+        const sync = () => (clearBtn.style.display = searchInput.value ? "block" : "none");
+        searchInput.addEventListener("input", sync);
+        clearBtn.addEventListener("click", () => {
+            searchInput.value = "";
+            sync();
+            handleSearch();
+        });
+        sync();
+    }
+
+    // Default: level then course name
+    __setupSorter({
+        tableId: "courseTable",
+        keyByIndex: ["code", "name", "levelType", "active", null],
+    });
+    __SORT_STATE__ = [{ key: "levelType", dir: "asc" }, { key: "name", dir: "asc" }];
+    __updateSortUI();
 }
 
 /* ================= RENDER ================= */
