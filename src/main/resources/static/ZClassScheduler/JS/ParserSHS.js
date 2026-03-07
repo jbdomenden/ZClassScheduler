@@ -143,7 +143,7 @@
                 name: row.name,
                 yearTerm: currentYT
             });
-        }
+
 
         return { program, subjects };
     }

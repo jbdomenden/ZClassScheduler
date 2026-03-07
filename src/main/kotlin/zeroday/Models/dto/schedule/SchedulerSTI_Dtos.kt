@@ -35,6 +35,8 @@ data class TertiaryRowResponse(
     val timeEnd: String?,
     val roomId: String?,
     val teacherId: String?,
-    val active: Boolean
+    val active: Boolean,
+    // True only for rows created via "Add Row" (duplicate) action.
+    val isDuplicateRow: Boolean = false
 )
 

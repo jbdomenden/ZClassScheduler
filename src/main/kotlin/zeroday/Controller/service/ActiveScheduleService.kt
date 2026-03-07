@@ -9,7 +9,7 @@ object ActiveScheduleService {
 
     fun getActiveNow(): List<ResultRow> {
         val now = LocalTime.now()
-        val today = LocalDate.now().dayOfWeek.name  // MONDAY, TUESDAY…
+        val today = LocalDate.now().dayOfWeek.name  // MONDAY, TUESDAY...
 
         return transaction {
             Schedules.select {

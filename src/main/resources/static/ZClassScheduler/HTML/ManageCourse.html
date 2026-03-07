@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -9,7 +9,12 @@
     <link rel="stylesheet" href="../CSS/base.css" />
     <!-- Page-specific styles for CRUD layout and modal -->
     <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 <!-- Global header populated dynamically (see load-global.js) -->
@@ -33,7 +38,7 @@
                 <div id="searchContainer"></div>
 
                 <!-- Primary action: open modal to add a course -->
-                <button id="addCourseBtn" class="btn btn-primary">+ Add Course</button>
+                <button id="addCourseBtn" class="btn btn-primary" type="button" data-tooltip="Create a new course">+ Add Course</button>
             </div>
 
             <!-- Table wrapper enables scrolling/responsive behavior -->
@@ -41,10 +46,10 @@
                 <table id="courseTable">
                     <thead>
                     <tr>
-                        <th data-key="code">Course Code</th>
-                        <th data-key="name">Course Name</th>
-                        <th data-key="levelType">Level</th>
-                        <th data-key="active">Status</th>
+                        <th data-key="code">Course Code<span class="sort-icon"></span></th>
+                        <th data-key="name">Course Name<span class="sort-icon"></span></th>
+                        <th data-key="levelType">Level<span class="sort-icon"></span></th>
+                        <th data-key="active">Status<span class="sort-icon"></span></th>
                         <th width="200">Actions</th>
                     </tr>
                     </thead>
@@ -104,6 +109,7 @@
 
 <!-- Loads shared header/sidebar content into #global-header and #global-nav -->
 <script src="../JS/load-global.js"></script>
+<script src="../JS/GlobalSidebar.js"></script>
 
 <!-- Page module: course CRUD logic, table rendering, modal control -->
 <script type="module" src="../JS/ManageCourse.js"></script>

@@ -1,5 +1,20 @@
+/* ================= PANEL ================= */
+.panel{
+    background:#fff;
+    border-radius:12px;
+    box-shadow:0 2px 6px rgba(0,0,0,.04);
+    overflow:hidden;
+}
+
 /* ================= PANEL HEADER ================= */
-.panel-header{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:15px;}
+.panel-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:15px;
+    padding:14px 16px;
+    border-bottom:1px solid rgba(2,6,23,.12);
+}
 
 /* ================= PANEL ACTIONS ================= */
 .panel-actions{display:flex;gap:10px;align-items:center;}
@@ -14,7 +29,8 @@
 /* ================= MODAL CONTENT ================= */
 .modal-content{background:#fff;width:420px;padding:25px;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.15);}
 .modal-content h3{margin-bottom:15px;font-weight:600;}
-.modal-lg{max-width:920px;}
+.modal-content{max-height:90vh;overflow:auto;}
+.modal-content.modal-lg{width:min(920px,95vw);max-width:920px;}
 
 /* ================= FORM ================= */
 .modal-content form{display:flex;flex-direction:column;}
@@ -23,6 +39,15 @@
 .modal-content input:focus,.modal-content select:focus{outline:none;border-color:#2e7d32;}
 .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:12px 0 16px;}
 .form-field label{display:block;margin-bottom:6px;}
+.form-field input,.form-field select{width:100%;}
+
+/* Two-up rows inside modals (e.g. Time Start/End side-by-side) */
+.form-row{display:flex;gap:14px;align-items:flex-start;}
+.form-row .form-field{flex:1;min-width:180px;}
+@media (max-width:560px){
+    .form-row{flex-direction:column;}
+    .form-row .form-field{min-width:0;}
+}
 
 /* ================= MODAL ACTION BUTTONS ================= */
 .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px;}

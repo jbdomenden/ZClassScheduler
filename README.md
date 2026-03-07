@@ -19,6 +19,8 @@ Here's a list of features included in this project:
 
 ## Building & Running
 
+This project requires **Java 17+** to run Gradle. If your default `java -version` is Java 8, you can either install a newer JDK or run Gradle using IntelliJ's bundled JBR via `tools/gradle-jbr.ps1`.
+
 To build or run the project, use one of the following tasks:
 
 | Task                                    | Description                                                          |

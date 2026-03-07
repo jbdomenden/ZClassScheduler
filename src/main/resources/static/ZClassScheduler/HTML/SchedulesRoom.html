@@ -1,13 +1,20 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZClassScheduler</title>
 
     <!-- Core Styles -->
     <link rel="stylesheet" href="../CSS/base.css">
+    <link rel="stylesheet" href="../CSS/ManageDesign.css">
     <link rel="stylesheet" href="../CSS/ScheduleGrid.css">
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 
@@ -16,59 +23,154 @@
 <div class="container">
     <aside id="global-nav" class="sidebar"></aside>
 
-    <main>
+    <main class="crud-scope no-page-scroll">
 
         <div class="page-header">
             <h2>Room Schedule</h2>
         </div>
 
-        <!-- 🔍 Search -->
-        <div class="search">
-            <div class="search-wrapper">
-                <span class="search-icon">🔎</span>
+        <section class="panel">
+            <div class="panel-header">
+                <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;width:100%;">
+                    <!-- Left controls switch between weekly and daily -->
+                    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                        <!-- WEEKLY TOOLS -->
+                        <div id="weeklyTools">
+                            <div class="search" style="margin:0;">
+                                <div class="search-wrapper">
+                                    <span class="search-icon">&#128269;</span>
 
-                <input
-                        type="text"
-                        id="roomSearch"
-                        placeholder="Search room..."
-                        autocomplete="off"
-                >
+                                    <input
+                                            type="text"
+                                            id="roomSearch"
+                                            placeholder="Search room..."
+                                            autocomplete="off"
+                                    >
 
-                <button id="clearRoomSearch" class="clear-btn">✕</button>
+                                    <button id="clearRoomSearch" class="clear-btn" type="button">&times;</button>
 
-                <div id="roomDropdown" class="search-dropdown"></div>
+                                    <div id="roomDropdown" class="search-dropdown"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DAILY TOOLS -->
+                        <div id="dailyTools" class="is-hidden">
+                            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                                <div class="search" style="margin:0;">
+                                    <div class="search-wrapper">
+                                        <span class="search-icon">&#128269;</span>
+
+                                        <input
+                                                type="text"
+                                                id="dailyRoomSearch"
+                                                placeholder="Filter room columns..."
+                                                autocomplete="off"
+                                        >
+
+                                        <button id="clearDailyRoomSearch" class="clear-btn" type="button">&times;</button>
+
+                                        <div id="dailyRoomDropdown" class="search-dropdown"></div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <select id="dailyDaySelect" style="padding:8px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;">
+                                        <option value="MON">Monday</option>
+                                        <option value="TUE">Tuesday</option>
+                                        <option value="WED">Wednesday</option>
+                                        <option value="THU">Thursday</option>
+                                        <option value="FRI">Friday</option>
+                                        <option value="SAT">Saturday</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View buttons on the right aligned with tools -->
+                    <div class="view-toggle" style="margin:0;">
+                        <button id="weeklyViewBtn" class="btn btn-primary" type="button">Weekly View</button>
+                        <button id="dailyViewBtn" class="btn btn-secondary" type="button">Daily View</button>
+                        <button id="downloadDailyExcelBtn" class="btn btn-secondary" type="button" data-tooltip="Download daily view as Excel (CSV)">Download Excel</button>
+                    <button id="printBtn" class="btn btn-secondary" type="button" data-tooltip="Print this schedule">Print</button>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Dynamic Title -->
-        <h3 id="roomTitle">Weekly Room Schedule</h3>
+            <div style="padding:14px 16px;">
+                <!-- WEEKLY VIEW (per-room weekly grid) -->
+                <section id="weeklyView">
+                    <h3 id="roomTitle" style="margin:0 0 12px;">Weekly Room Schedule</h3>
 
-        <!-- Schedule Table -->
-        <table class="schedule-table">
-            <thead>
-            <tr>
-                <th colspan="2">TIME</th>
-                <th>MONDAY</th>
-                <th>TUESDAY</th>
-                <th>WEDNESDAY</th>
-                <th>THURSDAY</th>
-                <th>FRIDAY</th>
-                <th>SATURDAY</th>
-            </tr>
-            </thead>
+                    <div class="schedule-grid">
+                        <table class="schedule-table">
+                            <thead>
+                            <tr>
+                                <th colspan="2">TIME</th>
+                                <th>MONDAY</th>
+                                <th>TUESDAY</th>
+                                <th>WEDNESDAY</th>
+                                <th>THURSDAY</th>
+                                <th>FRIDAY</th>
+                                <th>SATURDAY</th>
+                            </tr>
+                            </thead>
 
-            <tbody id="roomGrid">
-            <!-- Generated by SchedulesRoom.js -->
-            </tbody>
-        </table>
+                            <tbody id="roomGrid"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- DAILY VIEW (dashboard-style room overview with day selector) -->
+                <section id="dailyView" class="is-hidden">
+                    <h3 id="dailyRoomTitle" style="margin:0 0 12px;">Daily Room Overview</h3>
+
+                    <div class="schedule-grid">
+                        <table class="schedule-table" id="dailyRoomOverviewTable">
+                            <thead>
+                            <tr id="dailyRoomOverviewHeader">
+                                <th colspan="2">TIME</th>
+                            </tr>
+                            </thead>
+                            <tbody id="dailyRoomGrid"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </section>
 
     </main>
+</div>
+
+<!-- Checker presence modal (used when role=CHECKER) -->
+<div id="checkerModal" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="margin-top:0;">Checker Report</h3>
+        <div id="checkerInfo" class="muted" style="margin-bottom:12px;"></div>
+
+        <input type="hidden" id="checkerScheduleId" />
+
+        <label style="display:block;margin-bottom:6px;margin-top:8px;">Status</label>
+        <select id="checkerStatus" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;">
+            <option value="PRESENT">Present</option>
+            <option value="ABSENT">Absent</option>
+            <option value="NOT_IN_CLASS">Not in class</option>
+        </select>
+
+        <label style="display:block;margin-bottom:6px;">Note (optional)</label>
+        <textarea id="checkerNote" rows="4" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid #cbd5e1;resize:vertical;"></textarea>
+
+        <div class="modal-actions" style="margin-top:14px;">
+                    <button id="checkerSaveBtn" class="btn btn-primary" type="button" data-tooltip="Save checker report">Save</button>
+                    <button id="checkerCancelBtn" class="btn btn-secondary" type="button" data-tooltip="Close without saving">Cancel</button>
+        </div>
+    </div>
 </div>
 
 <script src="../JS/load-global.js"></script>
 <script src="../JS/GlobalSidebar.js"></script>
 
-<!-- ✅ Department flag (change this per department page) -->
 <script>
     window.DEPARTMENT = "STI";  /* JHS | SHS | NAMEI */
 </script>

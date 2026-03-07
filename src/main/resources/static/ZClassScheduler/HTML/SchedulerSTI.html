@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -8,7 +8,12 @@
     <link rel="stylesheet" href="../CSS/base.css" />
     <link rel="stylesheet" href="../CSS/ManageDesign.css" />
     <link rel="stylesheet" href="../CSS/SchedulerDesign.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 <header id="global-header" class="topbar"></header>
@@ -29,8 +34,8 @@
                 <div id="searchContainer"></div>
 
                 <div class="panel-actions">
-                    <button id="addBlockBtn" class="btn btn-primary">+ Add Schedule</button>
-                    <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+            <button id="addBlockBtn" class="btn btn-primary" type="button" data-tooltip="Add a new class schedule">+ Add Schedule</button>
+            <button id="refreshBtn" class="btn btn-secondary" type="button" data-tooltip="Reload schedules">Refresh</button>
                 </div>
             </div>
 
@@ -38,11 +43,11 @@
                 <table id="blocksTable">
                     <thead>
                     <tr>
-                        <th>Section</th>
-                        <th>Program</th>
-                        <th>Year</th>
-                        <th>Term</th>
-                        <th>Status</th>
+                        <th data-key="sectionCode">Section<span class="sort-icon"></span></th>
+                        <th data-key="courseCode">Program<span class="sort-icon"></span></th>
+                        <th data-key="year">Year<span class="sort-icon"></span></th>
+                        <th data-key="term">Term<span class="sort-icon"></span></th>
+                        <th data-key="active">Status<span class="sort-icon"></span></th>
                         <th width="210">Actions</th>
                     </tr>
                     </thead>
@@ -130,11 +135,21 @@
                 <option value="SATURDAY">SATURDAY</option>
             </select>
 
-            <label>Time Start</label>
-            <input id="editStart" type="time" />
+            <div class="form-row">
+                <div class="form-field">
+                    <label>Time Start</label>
+                    <select id="editStart">
+                        <option value="">(Unset)</option>
+                    </select>
+                </div>
 
-            <label>Time End</label>
-            <input id="editEnd" type="time" />
+                <div class="form-field">
+                    <label>Time End</label>
+                    <select id="editEnd">
+                        <option value="">(Unset)</option>
+                    </select>
+                </div>
+            </div>
 
             <label>Room</label>
             <select id="editRoom">
@@ -146,6 +161,14 @@
                 <option value="">(Unset)</option>
             </select>
 
+            <div class="hint" style="margin-top:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <b>Suggestions</b>
+                    <button type="button" id="editSuggestBtn" class="btn btn-secondary" data-tooltip="Suggest a free room/instructor">Suggest</button>
+                </div>
+                <div id="editSuggestBox" class="muted" style="margin-top:8px;white-space:pre-wrap;"></div>
+            </div>
+
             <div class="modal-actions">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" id="editCancelBtn" class="btn btn-secondary">Cancel</button>
@@ -155,6 +178,7 @@
 </div>
 
 <script src="../JS/load-global.js"></script>
+<script src="../JS/GlobalSidebar.js"></script>
 <script type="module" src="../JS/SchedulerSTI.js"></script>
 </body>
 </html>

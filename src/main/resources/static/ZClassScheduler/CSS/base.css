@@ -19,12 +19,19 @@
 /* ================= GLOBAL ================= */
 *{box-sizing:border-box;font-family:system-ui,sans-serif;}
 body{margin:0;background:var(--bg);}
+.muted{color:var(--text-muted);}
 
 /* ================= PAGE LAYOUT ================= */
 .page{padding:24px;}
 .page h2{margin:0 0 16px;}
 .container{display:flex;height:calc(100vh - 60px);}
 main{flex:1;padding:24px;overflow-y:auto;}
+main.no-page-scroll{overflow:hidden !important;}
+
+/* Common page header used by schedulers/schedules/manage pages */
+.page-header{margin-bottom:16px;}
+.page-header h2{margin:0;font-size:22px;}
+.subtitle{margin:6px 0 0;font-size:13px;color:var(--text-muted);}
 
 /* ================= GRID SYSTEM ================= */
 .grid{display:grid;border:1px solid var(--border);background:var(--card);}
@@ -46,13 +53,25 @@ thead .time-col{z-index:6;}
 .hour-break td{border-top:2px solid var(--border);}
 
 /* ================= EVENT COLORS ================= */
-.lecture,.laboratory,.pe,.consultation,.admin,.break{text-align:center;font-weight:600;font-size:15px;}
+.lecture,.laboratory,.pe,.consultation,.admin,.break,.restday{text-align:center;font-weight:600;font-size:15px;}
 .lecture{background:#e6d27f;}
 .laboratory{background:#7ea4d3;}
 .pe{background:#7ed399;}
 .consultation{background:#d3b57e;}
 .admin{background:#d2ad7c;}
 .break{background:#9e9e9e;color:#fff;}
+.restday{background:#ef4444;color:#fff;}
+
+/* SchedulesRoom/SchedulesTeacher currently emit these types. */
+.Regular,.Elective,.regular,.elective{text-align:center;font-weight:600;}
+.Regular,.regular{background:rgba(37,99,235,.14);}
+.Elective,.elective{background:rgba(22,163,74,.16);}
+
+/* Conflict highlight for grid cells (room/teacher/section schedules) */
+.conflict-cell{
+    outline:2px solid rgba(220,38,38,.95);
+    outline-offset:-2px;
+}
 
 /* ================= SIDEBAR ================= */
 .sidebar{width:250px;background:var(--bg-dark);color:#e5e7eb;padding:16px 12px;overflow-y:auto;transition:transform .25s ease,width .25s ease;}
@@ -62,14 +81,101 @@ thead .time-col{z-index:6;}
 .sidebar a,.sidebar summary{display:flex;align-items:center;padding:8px 10px;border-radius:6px;cursor:pointer;text-decoration:none;color:#e5e7eb;font-size:14px;}
 .sidebar a:hover,.sidebar summary:hover,.sidebar a.active{background:#1e293b;}
 .sidebar details summary{list-style:none;font-weight:500;}
-.sidebar details summary::after{content:"▸";margin-left:auto;font-size:12px;transition:transform .2s ease;}
+.sidebar details summary::after{content:"\25B8";margin-left:auto;font-size:12px;transition:transform .2s ease;}
 .sidebar details[open] summary::after{transform:rotate(90deg);}
 .sidebar details a{padding-left:30px;font-size:13px;}
 
 /* ================= TOPBAR ================= */
-.topbar{height:60px;background:var(--bg-dark);color:#fff;display:flex;justify-content:space-between;align-items:center;padding:0 24px;}
-.topbar button{background:#1e293b;border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;}
-.topbar button:hover{background:#334155;}
+.topbar{
+    height:60px;
+    background:var(--bg-dark);
+    color:#fff;
+    display:flex;
+    justify-content:flex-start;
+    align-items:center;
+    gap:12px;
+    padding:0 24px;
+}
+.topbar .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    text-decoration:none;
+    color:inherit;
+    min-width:0;
+}
+.topbar .brand.brand-z{
+    gap:0;
+}
+.topbar .app-icon{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.18);
+    box-shadow:0 1px 2px rgba(2,6,23,.18);
+}
+.topbar .app-icon.app-icon-z{
+    width:32px;
+    height:32px;
+    border-radius:0;
+    background:transparent;
+    border:none;
+    box-shadow:none;
+    margin-right:-6px; /* visually "connect" Z icon with the word */
+}
+.topbar .logo{
+    font-weight:900;
+    letter-spacing:.2px;
+    font-size:16px;
+    opacity:.95;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.topbar .brand.brand-z .logo{
+    letter-spacing:.15px;
+    font-size:17px;
+}
+ .topbar .user-menu{margin-left:auto; position:relative;}
+ .topbar .hamburger{font-size:22px;font-weight:900;}
+ .topbar .kebab{font-size:22px; line-height:1;}
+
+ /* Topbar kebab dropdown */
+ .user-menu-dropdown{
+     position:absolute;
+     right:0;
+     top:calc(100% + 10px);
+     min-width:200px;
+     background:#0b1220;
+     border:1px solid rgba(255,255,255,.16);
+     border-radius:12px;
+     box-shadow:0 16px 40px rgba(0,0,0,.35);
+     padding:8px;
+     z-index:12000;
+ }
+ .user-menu-dropdown.hidden{display:none;}
+ .user-menu-item{
+     width:100%;
+     display:flex;
+     align-items:center;
+     justify-content:flex-start;
+     gap:10px;
+     padding:10px 10px;
+     border-radius:10px;
+     border:none;
+     background:transparent;
+     color:#e5e7eb;
+     cursor:pointer;
+     text-align:left;
+     font-size:13px;
+ }
+ .user-menu-item:hover{background:rgba(255,255,255,.08);}
+ .user-menu-item.danger{color:#fecaca;}
+ .user-menu-item.danger:hover{background:rgba(220,38,38,.18);}
+/* Legacy: only style bare buttons in the topbar; prefer using the shared .btn system. */
+.topbar button:not(.btn):not(.user-menu-item){background:#1e293b;border:none;color:#fff;padding:6px 12px;border-radius:6px;cursor:pointer;}
+.topbar button:not(.btn):not(.user-menu-item):hover{background:#334155;}
 
 /* ================= SEARCH SYSTEM ================= */
 .search{display:flex;margin-bottom:15px;}
@@ -87,8 +193,9 @@ thead .time-col{z-index:6;}
 .search-item:hover,.search-item.active,.dropdown-item:hover{background:#f1f5f9;}
 
 /* ================= CRUD BUTTON SYSTEM ================= */
-.crud-scope .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;font-size:13px;border-radius:6px;border:none;cursor:pointer;transition:.2s ease;}
+.crud-scope .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;font-size:13px;border-radius:var(--btn-radius,10px);border:none;cursor:pointer;transition:.2s ease;}
 .crud-scope td .btn{padding:6px 10px;font-size:12px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;font-size:13px;border-radius:var(--btn-radius,10px);border:none;cursor:pointer;transition:.2s ease;background:rgba(73,80,87,.2);color:#0f172a;}
 .btn-primary{background:#1e3a8a;color:#fff;}
 .btn-primary:hover{background:#2e5be3;}
 .btn-edit,.btn-view{background:#e6f4ea;border:1px solid #b7e4c7;}
@@ -96,6 +203,180 @@ thead .time-col{z-index:6;}
 .btn-view{color:#808080;}
 .btn-delete,.btn-warning{background:#fdecea;color:#c62828;border:1px solid #f5c6cb;}
 .btn-secondary{background:rgba(73,80,87,.2);color:#495057;border:1px solid #dee2e6;}
+
+/* Icon-only buttons (keep existing .btn colors) */
+.btn.btn-icon{
+    padding:6px;
+    width:34px;
+    height:34px;
+    min-width:34px;
+}
+.btn.btn-icon svg{
+    width:16px;
+    height:16px;
+    display:block;
+    fill:currentColor;
+    pointer-events:none;
+}
+
+/* ================= BUTTON UNIFICATION (GLOBAL) =================
+   Goal: every button (text or icon) feels like the same component:
+   consistent height, radius, focus ring, hover/active behavior.
+*/
+:root{
+    --btn-height:36px;
+    --btn-radius:12px;
+    --btn-border:rgba(2,6,23,.12);
+    --btn-shadow:0 1px 2px rgba(2,6,23,.08);
+    --btn-focus:0 0 0 3px rgba(37,99,235,.22);
+}
+
+/* Normalize all .btn regardless of where it appears. */
+.btn{
+    border-radius:var(--btn-radius);
+    min-height:var(--btn-height);
+    border:1px solid var(--btn-border);
+    box-shadow:var(--btn-shadow);
+    font-weight:700;
+    letter-spacing:.15px;
+    line-height:1;
+    user-select:none;
+    transition:transform 90ms ease,box-shadow 180ms ease,background-color 180ms ease,border-color 180ms ease,color 180ms ease,filter 180ms ease;
+}
+
+/* Keep table buttons a bit tighter but same height. */
+.crud-scope td .btn{
+    min-height:var(--btn-height);
+}
+
+.btn:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(2,6,23,.14);}
+.btn:active{transform:translateY(0);box-shadow:var(--btn-shadow);}
+.btn:focus-visible{outline:none;box-shadow:var(--btn-shadow),var(--btn-focus);}
+
+.btn[disabled], .btn:disabled{
+    opacity:.55;
+    cursor:not-allowed;
+    transform:none;
+    filter:none;
+}
+
+/* Icon buttons should align perfectly with text buttons. */
+.btn.btn-icon{
+    width:var(--btn-height);
+    height:var(--btn-height);
+    min-width:var(--btn-height);
+    padding:0;
+}
+
+/* Avoid hover "jump" inside dense tables. */
+.crud-scope td .btn:hover,
+table td .btn:hover{
+    transform:none;
+    box-shadow:var(--btn-shadow);
+}
+
+/* Variants */
+.btn-primary{
+    background:linear-gradient(180deg,#2563eb 0%,#1e3a8a 100%);
+    border-color:rgba(30,58,138,.55);
+    color:#fff;
+}
+.btn-primary:hover{filter:brightness(1.03);}
+
+.btn-secondary{
+    background:rgba(255,255,255,.92);
+    border-color:rgba(148,163,184,.65);
+    color:#0f172a;
+}
+.btn-secondary:hover{background:#fff;border-color:rgba(100,116,139,.55);}
+
+.btn-ghost{
+    background:rgba(255,255,255,.08);
+    border-color:rgba(255,255,255,.18);
+    color:#fff;
+    box-shadow:none;
+}
+.btn-ghost:hover{background:rgba(255,255,255,.12);box-shadow:none;}
+.btn-ghost:focus-visible{box-shadow:0 0 0 3px rgba(147,197,253,.35);}
+
+/* Sizes/utilities */
+.btn-lg{min-height:44px;padding:12px 16px;border-radius:14px;font-size:14px;}
+.btn-block{width:100%;}
+
+/* Simple view toggles */
+.view-toggle{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 16px;}
+.is-hidden{display:none !important;}
+
+/* ================= APP DIALOG (REPLACES alert()) ================= */
+.app-dialog-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(2,6,23,.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:99999;
+}
+.app-dialog-backdrop.hidden{display:none;}
+.app-dialog{
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 20px 60px rgba(2,6,23,.35);
+    width:min(520px,92vw);
+    max-height:86vh;
+    overflow:auto;
+    padding:18px 18px 16px;
+    border:1px solid rgba(148,163,184,.55);
+}
+.app-dialog .title{
+    margin:0 0 8px;
+    font-size:16px;
+    font-weight:900;
+    letter-spacing:.15px;
+}
+.app-dialog .msg{
+    margin:0;
+    font-size:14px;
+    line-height:1.35;
+    white-space:pre-wrap;
+    color:#0f172a;
+}
+.app-dialog .actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:14px;
+}
+.app-dialog .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-top:10px;
+}
+.app-dialog .field label{
+    font-size:12px;
+    font-weight:700;
+    color:#0f172a;
+}
+.app-dialog .field input{
+    width:100%;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid #cbd5e1;
+    font-size:14px;
+    outline:none;
+    background:#fff;
+}
+.app-dialog .field input:focus{
+    border-color:#2c5eff;
+    box-shadow:0 0 0 2px rgba(44,94,255,.15);
+}
+.app-dialog .help-list{
+    margin:10px 0 0;
+    padding-left:18px;
+    font-size:14px;
+    line-height:1.35;
+}
 
 /* ================= TABLE SORTING ================= */
 th[data-key]{cursor:pointer;user-select:none;position:relative;padding-right:24px;}
@@ -148,4 +429,311 @@ tr.subject-head:hover .add-row-handle {
 tr.subject-head .add-row-handle:hover {
     background: #2563eb;
     transform: translate(-50%, 50%) scale(1.1);
+}
+
+/* ================= MOBILE / RESPONSIVE =================
+   Goal: keep the app usable in mobile browsers without rewriting each page.
+   - Sidebar becomes an off-canvas drawer with a backdrop.
+   - Topbar stays visible.
+   - Reduce padding and prevent flex overflow.
+*/
+
+html{
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+}
+
+img{max-width:100%;height:auto;}
+
+/* Prevent flex children from forcing horizontal scroll (common on mobile). */
+main{min-width:0;}
+
+/* Smooth scrolling for overflow wrappers on iOS. */
+.schedule-grid,.room-grid,.section-grid,.table-wrapper,.detail-table-wrap{
+    -webkit-overflow-scrolling:touch;
+}
+
+/* Sticky topbar keeps navigation reachable on small screens. */
+.topbar{
+    position:sticky;
+    top:0;
+    z-index:11000;
+}
+
+/* Backdrop used when sidebar is open on mobile. JS toggles .show + body.sidebar-open. */
+.sidebar-backdrop{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    top:60px; /* below topbar */
+    background:rgba(2,6,23,.45);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .18s ease;
+    z-index:9999;
+}
+.sidebar-backdrop.show{
+    opacity:1;
+    pointer-events:auto;
+}
+body.sidebar-open{overflow:hidden;}
+
+/* Use dynamic viewport units on mobile where supported. */
+.container{
+    min-height:calc(100vh - 60px);
+}
+@supports (height: 100dvh){
+    .container{min-height:calc(100dvh - 60px);}
+}
+
+@media (max-width:900px){
+    .page{padding:14px 12px;}
+    main{padding:14px 12px;}
+    .topbar{padding:0 12px;}
+    .topbar .logo{font-size:15px;}
+
+    /* Prevent iOS Safari from auto-zooming focused inputs. */
+    input,select,textarea{font-size:16px;}
+
+    /* Let main take full width; sidebar becomes overlay. */
+    .container{display:block;height:auto;}
+
+    .sidebar{
+        position:fixed;
+        top:60px;
+        left:0;
+        bottom:0;
+        width:min(86vw,320px);
+        z-index:10000;
+        transform:translateX(-102%);
+        box-shadow:0 20px 60px rgba(2,6,23,.35);
+        border-right:1px solid rgba(255,255,255,.10);
+    }
+
+    /* Override the desktop "width:0" collapse; on mobile we hide via transform. */
+    .sidebar.collapsed{
+        width:min(86vw,320px);
+        transform:translateX(-102%);
+    }
+    .sidebar:not(.collapsed){
+        transform:translateX(0);
+    }
+}
+
+@media print{
+    @page{
+        size: landscape;
+        margin: 10mm;
+    }
+
+    body{background:#fff !important;}
+    header.topbar,
+    aside.sidebar,
+    .sidebar-backdrop,
+    #sidebarToggle,
+    #logoutBtn,
+    .panel-header,
+    .view-toggle,
+    button,
+    .btn,
+    input,
+    select,
+    textarea{
+        display:none !important;
+    }
+
+    .container{display:block !important;height:auto !important;min-height:auto !important;}
+    main{padding:0 !important;overflow:visible !important;}
+
+    .schedule-grid,
+    .room-grid,
+    .section-grid,
+    .table-wrapper,
+    .detail-table-wrap{
+        max-height:none !important;
+        overflow:visible !important;
+        border:none !important;
+        box-shadow:none !important;
+    }
+
+    /* Tables */
+    thead{display:table-header-group;}
+    tfoot{display:table-footer-group;}
+
+    th{position:static !important;}
+    table{page-break-inside:auto; width:100% !important; max-width:100% !important;}
+    tr{page-break-inside:avoid;page-break-after:auto;}
+    th,td{
+        padding:2px 3px !important;
+        font-size:9px !important;
+        line-height:1.1 !important;
+        vertical-align:top !important;
+        word-break:break-word !important;
+        white-space:normal !important;
+    }
+    tbody tr{height:auto !important;}
+
+    /* Weekly schedule grids: keep columns readable but compact, try to fit one page */
+    .schedule-grid .schedule-table{
+        table-layout:fixed !important;
+        font-size:8px !important;
+    }
+
+    /* Schedule lists: fit all columns to one page width; allow rows to paginate */
+    .table-wrapper table{
+        table-layout:fixed !important;
+    }
+
+    /* Print-only area (used for daily room view column pagination) */
+    #dailyRoomPrintArea{display:none !important;}
+    body[data-print-mode="daily-room"] main{display:none !important;}
+    body[data-print-mode="daily-room"] #dailyRoomPrintArea{display:block !important;}
+    body[data-print-mode="daily-room"] #dailyRoomPrintArea .print-page{page-break-after:always;}
+    body[data-print-mode="daily-room"] #dailyRoomPrintArea .print-page:last-child{page-break-after:auto;}
+}
+
+/* =========================
+   Tooltips (hover, focus, touch)
+   ========================= */
+.app-tooltip{
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 5000;
+    pointer-events: none;
+
+    max-width: min(320px, calc(100vw - 24px));
+    padding: 8px 10px;
+    border-radius: 10px;
+
+    background: rgba(15, 23, 42, 0.96);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.25;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.app-tooltip.show{
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* =========================
+   Help Tour (step-by-step demo)
+   ========================= */
+.tour-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(2,6,23,.62);
+    z-index:13000;
+}
+.tour-backdrop.hidden{display:none;}
+
+.tour-spotlight{
+    position:fixed;
+    left:0;
+    top:0;
+    width:100px;
+    height:60px;
+    border-radius:14px;
+    border:2px solid rgba(255,255,255,.90);
+    box-shadow:
+        0 0 0 6px rgba(255,255,255,.10),
+        0 20px 70px rgba(0,0,0,.45);
+    pointer-events:none;
+    transition: left 160ms ease, top 160ms ease, width 160ms ease, height 160ms ease;
+}
+.tour-spotlight.pulse{
+    animation: tourPulse 900ms ease-in-out infinite;
+}
+@keyframes tourPulse{
+    0%,100%{ box-shadow: 0 0 0 6px rgba(255,255,255,.10), 0 20px 70px rgba(0,0,0,.45); }
+    50%{ box-shadow: 0 0 0 10px rgba(255,255,255,.16), 0 20px 70px rgba(0,0,0,.45); }
+}
+
+.tour-card{
+    position:fixed;
+    left:24px;
+    top:90px;
+    width:min(460px, calc(100vw - 48px));
+    background:#fff;
+    color:#0f172a;
+    border-radius:16px;
+    box-shadow:0 24px 80px rgba(0,0,0,.40);
+    padding:14px 14px 12px;
+}
+.tour-top{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+}
+.tour-step{
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.15px;
+    color:#334155;
+}
+.tour-close{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    border:1px solid #e2e8f0;
+    background:#fff;
+    cursor:pointer;
+}
+.tour-title{
+    margin:0 0 6px;
+    font-size:15px;
+    font-weight:900;
+}
+.tour-text{
+    font-size:14px;
+    line-height:1.35;
+    color:#0f172a;
+    white-space:pre-wrap;
+}
+.tour-actions{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    align-items:center;
+    margin-top:12px;
+    flex-wrap:wrap;
+}
+.tour-actions .spacer{flex:1;}
+
+.tour-cursor{
+    position:fixed;
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background:rgba(255,255,255,.95);
+    box-shadow:0 10px 30px rgba(0,0,0,.35);
+    transform: translate(-50%, -50%);
+    pointer-events:none;
+    z-index:13001;
+}
+.tour-cursor.hidden{display:none;}
+.tour-cursor.click{
+    animation: tourClick 520ms ease-in-out;
+}
+@keyframes tourClick{
+    0%{ transform: translate(-50%, -50%) scale(1); }
+    45%{ transform: translate(-50%, -50%) scale(.78); }
+    100%{ transform: translate(-50%, -50%) scale(1); }
+}
+
+@media (max-width: 900px){
+    .tour-card{
+        left:12px;
+        right:12px;
+        width:auto;
+        top:auto;
+        bottom:12px;
+    }
 }

@@ -1,11 +1,58 @@
-/* ================= SCHEDULE GRID WRAPPER ================= */
-.schedule-grid{overflow:auto;max-height:600px;border:1px solid var(--border);}
+/* =============================================================================================
+   Schedule Grid (weekly/daily timetable pages)
+   - wrapper handles vertical + horizontal scroll (never put overflow on the table itself)
+   - column widths are stable so header/body stay aligned
+============================================================================================= */
 
-/* ================= PAGE HEADER ================= */
-.page-title{margin-bottom:5px;}
-.subtitle{font-size:13px;color:#64748b;}
+.schedule-grid{
+    width:100%;
+    overflow:auto;                 /* horizontal + vertical */
+    max-height:70vh;               /* reasonable default; pages can override */
+    border:1px solid var(--border);
+    background:#fff;
+}
 
-/* ================= TABLE OVERRIDES (TEACHER) ================= */
-.schedule-table{width:100%;}
-.schedule-table td.lecture, .schedule-table td.lab, .schedule-table td.admin, .schedule-table td.break,
-.schedule-table td.special {text-align:center;vertical-align:middle;font-weight:600;}
+.schedule-grid .schedule-table{
+    border-collapse:collapse;
+    table-layout:auto;
+    width:max-content;             /* allows horizontal scroll when many columns */
+    min-width:100%;                /* still fills container when few columns */
+}
+
+/* Default column sizing: first two time columns are narrow, the rest are wider. */
+.schedule-grid .schedule-table th,
+.schedule-grid .schedule-table td{
+    min-width:200px;
+    width:200px;
+    vertical-align:middle;
+}
+
+.schedule-grid .schedule-table td:nth-child(-n+2),
+.schedule-grid .schedule-table .time-col{
+    min-width:90px;
+    width:90px;
+    white-space:nowrap;
+}
+
+/* Header uses a single TIME cell with colspan=2 */
+.schedule-grid .schedule-table thead th[colspan="2"]{
+    min-width:180px;
+    width:180px;
+}
+
+/* Keep headers visible while vertically scrolling inside the wrapper */
+.schedule-grid .schedule-table thead th{
+    position:sticky;
+    top:0;
+    z-index:5;
+}
+
+@media (max-width:520px){
+    .schedule-grid{max-height:66vh;}
+
+    .schedule-grid .schedule-table th,
+    .schedule-grid .schedule-table td{
+        min-width:160px;
+        width:160px;
+    }
+}

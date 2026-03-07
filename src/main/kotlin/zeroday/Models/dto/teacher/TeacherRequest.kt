@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TeacherRequest(
-    val empId: String,
+    val empId: String? = null,
     val firstName: String,
     val lastName: String,
     val department: String,

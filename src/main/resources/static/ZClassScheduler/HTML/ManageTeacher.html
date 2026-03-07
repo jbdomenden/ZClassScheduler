@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -9,7 +9,13 @@
   <link rel="stylesheet" href="../CSS/base.css" />
   <!-- Page-specific styles for CRUD layout + modal UI -->
   <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+  <link rel="stylesheet" href="../CSS/ScheduleGrid.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 <!-- Global header populated dynamically (see load-global.js) -->
@@ -21,8 +27,8 @@
 
   <main class="crud-scope">
     <div class="page-header">
-      <h2>Teacher Management</h2>
-      <p class="subtitle">Create, update, and manage teacher records</p>
+      <h2>User Management</h2>
+      <p class="subtitle">Create, update, and manage user accounts</p>
     </div>
 
     <!-- Main panel: search + action button + teacher list table -->
@@ -32,24 +38,22 @@
         <div id="searchContainer"></div>
 
         <!-- Primary action: open modal to add a teacher -->
-        <button id="addTeacherBtn" class="btn btn-primary">+ Add Teacher</button>
+                <button id="addTeacherBtn" class="btn btn-primary" type="button" data-tooltip="Create a new user">+ Add User</button>
       </div>
 
       <div class="table-wrapper">
         <table id="teacherTable">
           <thead>
           <tr>
-            <th data-key="empId">Employee ID</th>
-            <th data-key="firstName">First Name</th>
-            <th data-key="lastName">Last Name</th>
-            <th data-key="department">Department</th>
-            <th data-key="email">Email</th>
-            <th>Password</th>
-            <th data-key="role">Role</th>
-            <th data-key="status">Status</th>
-            <th width="150">Actions</th>
-          </tr>
-          </thead>
+            <th data-key="firstName">First Name<span class="sort-icon"></span></th>
+            <th data-key="lastName">Last Name<span class="sort-icon"></span></th>
+             <th data-key="department">Department<span class="sort-icon"></span></th>
+             <th data-key="email">Email<span class="sort-icon"></span></th>
+             <th data-key="role">Role<span class="sort-icon"></span></th>
+             <th data-key="status">Status<span class="sort-icon"></span></th>
+             <th width="240">Actions</th>
+           </tr>
+           </thead>
 
           <!-- IMPORTANT: Rows are rendered dynamically via ManageTeacher.js -->
           <tbody></tbody>
@@ -64,17 +68,14 @@
 <div id="teacherModal" class="modal hidden">
   <div class="modal-content">
     <!-- Modal title updates depending on create/edit mode -->
-    <h3 id="modalTitle">Add Teacher</h3>
+    <h3 id="modalTitle">Add User</h3>
 
     <!-- Teacher form: used for both add and edit flows -->
     <form id="teacherForm">
-      <label>Employee ID</label>
-      <input type="text" id="empId" required />
-
-      <label>Employee Firstname</label>
+      <label>First Name</label>
       <input type="text" id="empFn" required />
 
-      <label>Employee Lastname</label>
+      <label>Last Name</label>
       <input type="text" id="empLn" required />
 
       <label>Department</label>
@@ -89,19 +90,27 @@
         <option value="MT">Maritime Transportation</option>
         <option value="NA">Naval Architecture and Marine Engineering</option>
         <option value="HS">High School</option>
+        <option value="STAFF">Staff</option>
       </select>
+
+      <!-- Multi-department picker (used for ADMIN accounts) -->
+      <div id="deptMultiWrap" class="is-hidden" style="margin:10px 0 12px;">
+        <div class="muted" style="font-size:12px;margin:0 0 8px;">
+          For ADMIN: select one or more departments.
+        </div>
+        <div id="deptMulti" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+      </div>
 
       <label>Email</label>
       <input type="email" id="email" required />
 
-      <label>Default Password</label>
-      <input type="password" id="password" required />
-
       <label>Role</label>
       <select id="role" required>
         <option value="" disabled selected>Select Role</option>
-        <option value="Teacher">Teacher</option>
-        <option value="Admin">Admin</option>
+        <option value="TEACHER">Teacher</option>
+        <option value="ADMIN">Admin</option>
+        <option value="CHECKER">Checker</option>
+        <option value="NON_TEACHING">Non-Teaching</option>
       </select>
 
       <label>Status</label>
@@ -112,12 +121,81 @@
 
       <!-- Modal actions: submit saves; cancel closes without saving -->
       <div class="modal-actions">
+        <button type="button" id="resetPasswordBtn" class="btn btn-secondary is-hidden" data-tooltip="Reset password to default">Reset Password</button>
         <button type="submit" class="btn btn-primary">Save</button>
         <button type="button" id="cancelBtn" class="btn btn-secondary">
           Cancel
         </button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Admin Time Modal (Schedule Grid) -->
+<div id="adminTimeModal" class="modal hidden">
+  <div class="modal-content modal-lg">
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0;">Admin Time</h3>
+        <div class="muted" id="adminTimeTeacherLabel" style="margin-top:6px;"></div>
+        <div class="muted" style="margin-top:8px;font-size:12px;">
+          Click an empty slot to add ADMIN/BREAK/REST DAY time. Use Delete inside a block cell to remove it.
+        </div>
+      </div>
+
+      <button type="button" id="adminTimeCloseBtn" class="btn btn-secondary">Close</button>
+    </div>
+
+    <input type="hidden" id="adminTeacherId" />
+
+    <!-- Selection bar appears after clicking an empty slot -->
+    <div id="adminSelectionBar" class="is-hidden" style="margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc;">
+      <div class="form-row" style="margin:0;">
+        <div class="form-field">
+          <label>Day</label>
+          <input id="adminSelDay" type="text" readonly />
+        </div>
+        <div class="form-field">
+          <label>Start</label>
+          <input id="adminSelStart" type="text" readonly />
+        </div>
+        <div class="form-field">
+          <label>End</label>
+          <select id="adminSelEnd"></select>
+        </div>
+        <div class="form-field">
+          <label>Type</label>
+          <select id="adminSelType">
+            <option value="ADMIN">ADMIN</option>
+            <option value="BREAK">BREAK</option>
+            <option value="REST_DAY">REST DAY</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top:10px;">
+        <button type="button" id="adminSelSaveBtn" class="btn btn-primary">Add Block</button>
+        <button type="button" id="adminSelCancelBtn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+
+    <div class="schedule-grid" style="margin-top:12px;max-height:60vh;">
+      <table class="schedule-table" id="adminTimeScheduleTable">
+        <thead>
+        <tr>
+          <th colspan="2">TIME</th>
+          <th>MONDAY</th>
+          <th>TUESDAY</th>
+          <th>WEDNESDAY</th>
+          <th>THURSDAY</th>
+          <th>FRIDAY</th>
+          <th>SATURDAY</th>
+        </tr>
+        </thead>
+        <tbody id="adminTimeScheduleGrid"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 

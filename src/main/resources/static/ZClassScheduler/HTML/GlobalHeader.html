@@ -1,9 +1,27 @@
 <!-- Hamburger button: toggles sidebar visibility (handled in GlobalSidebar.js) -->
-<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<button id="sidebarToggle" class="btn btn-ghost btn-icon hamburger" type="button" aria-label="Toggle sidebar">&#9776;</button>
 
-<!-- Application logo / title -->
-<div class="logo">ZeroDay Scheduling</div>
+<!-- Brand (icon + title). Icon uses the same .ico as the browser tab for a unified identity. -->
+<a class="brand brand-z" href="Dashboard.html" aria-label="Go to dashboard">
+    <img class="app-icon app-icon-z" src="../Assets/zclassscheduler.ico" alt="" />
+    <div class="logo">eroDay Scheduling</div>
+</a>
 
-<!-- Logout button -->
-<button id=logoutBtn" onclick="logout()">Logout</button>
+<!-- User menu (kebab) -->
+<div class="user-menu" id="userMenu">
+    <button
+        id="userMenuBtn"
+        class="btn btn-ghost btn-icon kebab"
+        type="button"
+        aria-label="User menu"
+        aria-haspopup="menu"
+        aria-expanded="false"
+        data-tooltip="User menu"
+    >&#8942;</button>
 
+    <div id="userMenuDropdown" class="user-menu-dropdown hidden" role="menu" aria-label="User menu">
+        <button id="helpBtn" class="user-menu-item" type="button" role="menuitem" data-tooltip="How to use this page">Help</button>
+        <button id="changePasswordBtn" class="user-menu-item" type="button" role="menuitem" data-tooltip="Change your password">Change password</button>
+        <button id="logoutBtn" class="user-menu-item danger" type="button" role="menuitem" data-tooltip="Sign out">Logout</button>
+    </div>
+</div>

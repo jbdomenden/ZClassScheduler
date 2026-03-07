@@ -1,9 +1,11 @@
 package zeroday.Queries.Login
 
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.update
 import zeroday.Models.db.models.UserEntity
 import zeroday.Models.db.tables.UsersTable
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
 
 class UserRepositoryImpl : UserRepository {
 
@@ -33,4 +35,12 @@ class UserRepositoryImpl : UserRepository {
             }
         }
     }
+
+    fun updatePasswordByEmail(email: String, newSalt: String, newHash: String): Boolean =
+        transaction {
+            UsersTable.update({ UsersTable.email eq email.trim().lowercase() }) {
+                it[passwordSalt] = newSalt
+                it[passwordHash] = newHash
+            } > 0
+        }
 }

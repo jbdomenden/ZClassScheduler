@@ -3,12 +3,12 @@ package zeroday.Models.db.tables
 
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.javatime.time
-import java.time.LocalTime
 
 
 enum class TeacherBlockType {
     ADMIN,
-    BREAK
+    BREAK,
+    REST_DAY
 }
 
 

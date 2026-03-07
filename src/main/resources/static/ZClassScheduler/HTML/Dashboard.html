@@ -1,14 +1,21 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ZClassScheduler</title>
 
     <!-- Page-specific styles (dashboard) -->
     <link rel="stylesheet" href="../CSS/Dashboard.css" />
     <!-- Shared/base styles used across pages -->
     <link rel="stylesheet" href="../CSS/base.css" />
+    <link rel="stylesheet" href="../CSS/ScheduleGrid.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
 </head>
+
 
 <body>
 <!-- Global header populated dynamically (see load-global.js) -->
@@ -27,35 +34,27 @@
 
         <!-- High-level KPIs (static placeholders here; can be made dynamic later) -->
         <section class="kpi-grid">
-            <div class="kpi-card"><span>Total Schedules</span><strong>148</strong></div>
-            <div class="kpi-card"><span>Active Teachers</span><strong>42</strong></div>
-            <div class="kpi-card"><span>Rooms Used</span><strong>18</strong></div>
-            <div class="kpi-card"><span>Overall Utilization</span><strong>75%</strong></div>
+            <div class="kpi-card"><span>Active Schedules (Now)</span><strong id="kpiActiveSchedules">-</strong></div>
+            <div class="kpi-card"><span>Active Teachers (Now)</span><strong id="kpiActiveTeachers">-</strong></div>
+            <div class="kpi-card"><span>Active Rooms (Now)</span><strong id="kpiActiveRooms">-</strong></div>
+            <div class="kpi-card"><span>Schedules Today</span><strong id="kpiSchedulesToday">-</strong></div>
         </section>
 
         <!-- Main dashboard content panels -->
         <section class="content-grid">
             <!-- Room-by-time overview panel -->
             <div class="panel">
-                <div class="panel-header">
-                    <h3>Room Overview</h3>
+                <div style="padding:0 16px 6px;">
+                    <h3 id="roomTitle" style="margin:10px 0 6px;">Today's Room Overview</h3>
                 </div>
 
-                <div class="room-grid">
-                    <table>
+                <div class="schedule-grid" style="margin:0 16px 16px;">
+                    <table class="schedule-table" id="roomOverviewTable">
                         <thead>
-                        <tr>
-                            <th class="time-col" colspan="2">Time</th>
-                            <th>Lab 1</th>
-                            <th>Lab 2</th>
-                            <th>Lab 3</th>
-                            <th>Lab 4</th>
-                            <th>Lab 5</th>
-                            <th>Room 204</th>
+                        <tr id="roomOverviewHeader">
+                            <th colspan="2">TIME</th>
                         </tr>
                         </thead>
-
-                        <!-- IMPORTANT: roomGrid is populated dynamically by Dashboard.js -->
                         <tbody id="roomGrid"></tbody>
                     </table>
                 </div>
@@ -63,56 +62,41 @@
 
             <!-- Aggregate room utilization panel -->
             <div class="panel">
-                <div class="panel-header">
-                    <h3>Room Utilization</h3>
+                <div class="panel-header" style="flex-wrap:wrap;">
+                    <h3 style="margin:0;">Room Utilization</h3>
+
+                    <div class="panel-actions" style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                        <div class="view-toggle" style="margin:0;">
+                            <button id="utilModeDay" class="btn btn-secondary" type="button">Per Day</button>
+                            <button id="utilModeWeek" class="btn btn-secondary" type="button">Per Week</button>
+                        </div>
+
+                        <select id="utilDaySelect" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;">
+                            <option value="MONDAY">Monday</option>
+                            <option value="TUESDAY">Tuesday</option>
+                            <option value="WEDNESDAY">Wednesday</option>
+                            <option value="THURSDAY">Thursday</option>
+                            <option value="FRIDAY">Friday</option>
+                            <option value="SATURDAY">Saturday</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="padding:10px 16px 0;display:flex;gap:10px;flex-wrap:wrap;">
+                    <select id="utilFloorFilter" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;">
+                        <option value="">All Floors</option>
+                    </select>
+                    <select id="utilTypeFilter" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;">
+                        <option value="">All Types</option>
+                    </select>
                 </div>
 
                 <table>
-                    <!-- Overall utilization row -->
-                    <tr class="overall-row">
-                        <td>Overall</td>
-                        <td>18 / 24</td>
-                        <td>75%</td>
-                        <td>
-                            <div class="util-bar">
-                                <div class="util-fill medium" style="width: 75%"></div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <!-- Per-room breakdown -->
+                    <tbody id="utilizationGrid">
                     <tr>
-                        <td>Lab 1</td>
-                        <td>6 / 8</td>
-                        <td>75%</td>
-                        <td>
-                            <div class="util-bar">
-                                <div class="util-fill medium" style="width: 75%"></div>
-                            </div>
-                        </td>
+                        <td class="muted">Loading...</td>
                     </tr>
-
-                    <tr>
-                        <td>Lab 3</td>
-                        <td>8 / 8</td>
-                        <td>100%</td>
-                        <td>
-                            <div class="util-bar">
-                                <div class="util-fill high" style="width: 100%"></div>
-                            </div>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td>Room 204</td>
-                        <td>4 / 8</td>
-                        <td>50%</td>
-                        <td>
-                            <div class="util-bar">
-                                <div class="util-fill low" style="width: 50%"></div>
-                            </div>
-                        </td>
-                    </tr>
+                    </tbody>
                 </table>
             </div>
 
@@ -125,14 +109,18 @@
                 <table class="incomplete-table">
                     <thead>
                     <tr>
+                        <th width="48"></th>
                         <th>Section</th>
-                        <th>Subject</th>
-                        <th>Missing</th>
+                        <th>Incomplete</th>
+                        <th>Missing Day</th>
+                        <th>Missing Time</th>
+                        <th>Missing Teacher</th>
+                        <th>Missing Room</th>
                     </tr>
                     </thead>
                     <tbody id="incompleteGrid">
                     <tr>
-                        <td colspan="3" class="muted">Loading…</td>
+                        <td colspan="7" class="muted">Loading...</td>
                     </tr>
                     </tbody>
                 </table>
@@ -145,24 +133,14 @@
                     <h3>Conflicts Detected</h3>
                 </div>
 
-                <div class="conflict">
-                    <strong>Room Conflict</strong><br />
-                    08:00–09:30 • Lab 3<br />
-                    BSIT 2A overlaps with BSMT 3
-                </div>
-
-                <div class="conflict">
-                    <strong>Teacher Conflict</strong><br />
-                    10:00–11:30 • Room 204<br />
-                    Prof. Reyes assigned to 2 classes
-                </div>
+                <div id="conflictsGrid" class="muted" style="padding:12px 16px;">Loading...</div>
             </div>
         </section>
     </main>
 </div>
 
 <!-- Page logic for dashboard (e.g., roomGrid population) -->
-<script src="../JS/Dashboard.js"></script>
+<script type="module" src="../JS/Dashboard.js"></script>
 
 <!-- Loads shared header/sidebar content into #global-header and #global-nav -->
 <script src="../JS/load-global.js"></script>

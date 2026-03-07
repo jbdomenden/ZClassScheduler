@@ -3,6 +3,7 @@ package zeroday.Queries.Schedules
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
+import zeroday.Controller.service.ScheduleTimePolicy
 import zeroday.Models.db.tables.Curriculums
 import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
@@ -10,7 +11,7 @@ import zeroday.Models.dto.schedule.JhsBlockResponse
 import zeroday.Models.dto.schedule.JhsRowResponse
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.UUID
+import java.util.*
 
 object SchedulerJHS_Repository {
 
@@ -37,6 +38,7 @@ object SchedulerJHS_Repository {
 
     private val fmt24 = DateTimeFormatter.ofPattern("H:mm")
     private val fmt12 = DateTimeFormatter.ofPattern("h:mm a")
+    private val fmtGrid = DateTimeFormatter.ofPattern("HH:mm")
 
     private fun parseTimeOrNull(v: String?): LocalTime? {
         val s = v?.trim().orEmpty()
@@ -48,8 +50,6 @@ object SchedulerJHS_Repository {
     }
 
     fun listBlocks(): List<JhsBlockResponse> = transaction {
-        val deptLike = "%JHS%"
-
         // Explicit join constraints (no FK refs declared in Exposed tables)
         val join = Schedules
             .join(Curriculums, JoinType.INNER, additionalConstraint = { Schedules.curriculumId eq Curriculums.id })
@@ -57,7 +57,8 @@ object SchedulerJHS_Repository {
 
         val rows = join
             .select {
-                (Curriculums.dept like deptLike) and
+                (Curriculums.dept eq "JHS") and
+                        Curriculums.active.eq(true) and
                         Schedules.active.eq(true)
             }
             .orderBy(
@@ -69,7 +70,7 @@ object SchedulerJHS_Repository {
             .toList()
 
         val grouped = rows.groupBy {
-            (it[Schedules.section] ?: "") to (it[Schedules.year] ?: 0)
+            it[Schedules.section] to it[Schedules.year]
         }
 
         grouped.map { (k, items) ->
@@ -79,8 +80,8 @@ object SchedulerJHS_Repository {
             JhsBlockResponse(
                 section = section,
                 grade = grade,
-                curriculumName = (first[Curriculums.name] ?: ""),
-                program = (first[Curriculums.courseCode] ?: ""),
+                curriculumName = first[Curriculums.name],
+                program = first[Curriculums.courseCode],
                 status = if (first[Schedules.active]) "Active" else "Inactive",
                 rows = items.map { it.toRowDto() }
             )
@@ -93,8 +94,8 @@ object SchedulerJHS_Repository {
             .singleOrNull()
             ?: throw IllegalArgumentException("Curriculum not found")
 
-        val dept = (cur[Curriculums.dept] ?: "").uppercase()
-        if (!dept.contains("JHS")) throw IllegalArgumentException("Curriculum is not JHS")
+        val dept = cur[Curriculums.dept].uppercase()
+        if (dept != "JHS") throw IllegalArgumentException("Curriculum is not JHS")
 
         val renderedSection = renderSection(grade, sectionName)
 
@@ -205,24 +206,39 @@ object SchedulerJHS_Repository {
         roomId: UUID?,
         teacherId: UUID?
     ) = transaction {
+        val parsedStart = parseTimeOrNull(start)
+        val parsedEnd = parseTimeOrNull(end)
+        val (ns, ne) = ScheduleTimePolicy.normalizeStrictOrNull(parsedStart, parsedEnd)
+
+        if (teacherId != null && day != null && ns != null && ne != null) {
+            val dayNorm = day.trim().uppercase()
+            if (TeacherBlockRepository.hasRestDayOverlap(teacherId, dayNorm, ns, ne)) {
+                throw IllegalArgumentException("Cannot set schedule: teacher is on REST DAY for $dayNorm.")
+            }
+        }
+
         Schedules.update({ Schedules.id eq id }) {
             it[Schedules.dayOfWeek] = day
-            it[Schedules.timeStart] = parseTimeOrNull(start)
-            it[Schedules.timeEnd] = parseTimeOrNull(end)
+            it[Schedules.timeStart] = ns
+            it[Schedules.timeEnd] = ne
             it[Schedules.roomId] = roomId
             it[Schedules.teacherId] = teacherId
         }
     }
 
-    private fun ResultRow.toRowDto(): JhsRowResponse = JhsRowResponse(
-        id = this[Schedules.id].toString(),
-        subjectCode = runCatching { this[Subjects.code] }.getOrNull().orEmpty(),
-        subjectName = (runCatching { this[Subjects.name] }.getOrNull() ?: this[Schedules.subjectName]),
-        dayOfWeek = this[Schedules.dayOfWeek],
-        timeStart = this[Schedules.timeStart]?.toString(),
-        timeEnd = this[Schedules.timeEnd]?.toString(),
-        roomId = this[Schedules.roomId]?.toString(),
-        teacherId = this[Schedules.teacherId]?.toString(),
-        isDuplicateRow = this[Schedules.isDuplicateRow]
-    )
+    private fun ResultRow.toRowDto(): JhsRowResponse {
+        val (ns, ne) = ScheduleTimePolicy.normalizeForReadOrReset(this[Schedules.timeStart], this[Schedules.timeEnd])
+
+        return JhsRowResponse(
+            id = this[Schedules.id].toString(),
+            subjectCode = runCatching { this[Subjects.code] }.getOrNull().orEmpty(),
+            subjectName = (runCatching { this[Subjects.name] }.getOrNull() ?: this[Schedules.subjectName]),
+            dayOfWeek = this[Schedules.dayOfWeek],
+            timeStart = ns?.format(fmtGrid),
+            timeEnd = ne?.format(fmtGrid),
+            roomId = this[Schedules.roomId]?.toString(),
+            teacherId = this[Schedules.teacherId]?.toString(),
+            isDuplicateRow = this[Schedules.isDuplicateRow]
+        )
+    }
 }
