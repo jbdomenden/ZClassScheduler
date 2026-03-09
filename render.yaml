@@ -1,7 +1,7 @@
 services:
   - type: web
     name: ZClassScheduler
-    plan: free
-    runtime: docker
-    buildCommand: ""
-    startCommand: ""
+    plan: free           # or the plan you prefer
+    runtime: java        # ensures Render installs a JDK
+    buildCommand: ./gradlew build
+    startCommand: java -jar build/libs/ZClassScheduler.jar
