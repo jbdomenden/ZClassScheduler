@@ -2,8 +2,7 @@
 FROM gradle:8.6-jdk17 AS build
 WORKDIR /home/app
 COPY . .
-RUN gradle clean build -x test --no-daemon
-
+RUN ./gradlew clean build -x test --no-daemon --stacktrace
 # ---------- Runtime stage ----------
 # Use Eclipse Temurin for the runtime stage.
 FROM eclipse-temurin:17
