@@ -3,10 +3,23 @@ ktor:
     modules:
       - zeroday.ApplicationKt.module
   deployment:
-    port: 8080
-
+    port: ${PORT:8080}  # Render sets PORT; fall back to 8080 locally
 database:
   driver: "org.postgresql.Driver"
-  url: "jdbc:postgresql://192.168.88.4:6432/zeroday_db?prepareThreshold=0"
-  user: "postgres"
-  password: "root"
+  url: ${JDBC_DATABASE_URL}
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+
+
+#ktor:
+#  application:
+#    modules:
+#      - zeroday.ApplicationKt.module
+#  deployment:
+#    port: 8080
+#
+#database:
+#  driver: "org.postgresql.Driver"
+#  url: "jdbc:postgresql://192.168.88.4:6432/zeroday_db?prepareThreshold=0"
+#  user: "postgres"
+#  password: "root"
