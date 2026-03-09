@@ -19,7 +19,10 @@ COPY . .
 RUN gradle clean build -x test --no-daemon
 
 # ---------- Runtime stage ----------
-FROM openjdk:17-jdk-slim
+# Use the full JDK image rather than the slim variant to avoid "not found"
+# errors on slim tags. The standard openjdk:17-jdk image is widely
+# available on Docker Hub and includes the necessary JRE to run your app.
+FROM openjdk:17-jdk
 WORKDIR /app
 
 # Copy the built JAR from the build stage into the runtime image.
