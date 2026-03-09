@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: ZClassScheduler
+    plan: free           # or whatever plan you’re using
+    runtime: java        # tells Render to use their Java environment
+    buildCommand: ./gradlew build
+    startCommand: java -jar build/libs/ZClassScheduler.jar
