@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZClassScheduler</title>
+
+    <link rel="stylesheet" href="../CSS/base.css" />
+    <link rel="stylesheet" href="../CSS/ManageDesign.css" />
+    <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
+    <link rel="icon" type="image/png" sizes="256x256" href="/ZClassScheduler/Assets/zclassscheduler-256.png" />
+</head>
+
+<body>
+<header id="global-header" class="topbar"></header>
+
+<div class="container">
+    <aside id="global-nav" class="sidebar"></aside>
+
+    <main class="crud-scope">
+        <div class="page-header">
+            <h2>Checker Logs</h2>
+            <p class="subtitle">Presence checks recorded by CHECKER (visible to CHECKER, ADMIN, SUPER_ADMIN)</p>
+        </div>
+
+        <section class="panel">
+            <div class="panel-header" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <input id="q" placeholder="Search (checker, teacher, room, section, subject, note)" style="padding:10px 12px;border-radius:10px;border:1px solid #cbd5e1;min-width:280px;flex:1;" />
+
+                <select id="statusFilter" style="padding:10px 12px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;">
+                    <option value="">All Status</option>
+                    <option value="PRESENT">Present</option>
+                    <option value="ABSENT">Absent</option>
+                    <option value="NOT_IN_CLASS">Not in class</option>
+                </select>
+
+                    <button id="refreshBtn" class="btn btn-secondary" type="button" data-tooltip="Reload checker logs">Refresh</button>
+                    <button id="printBtn" class="btn btn-secondary" type="button" data-tooltip="Print this table">Print</button>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="checkerTable">
+                    <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Checker</th>
+                        <th>Teacher</th>
+                        <th>Dept</th>
+                        <th>Room</th>
+                        <th>Day</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Result</th>
+                        <th>Note</th>
+                    </tr>
+                    </thead>
+                    <tbody id="checkerTbody">
+                    <tr><td colspan="10" class="muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding:12px 0 0;">
+                <button id="loadMoreBtn" class="btn btn-secondary" type="button" style="display:none;" data-tooltip="Load more entries">Load More</button>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="../JS/load-global.js"></script>
+<script src="../JS/GlobalSidebar.js"></script>
+<script type="module" src="../JS/CheckerLogs.js"></script>
+</body>
+</html>
