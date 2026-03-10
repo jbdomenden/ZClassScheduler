@@ -1,21 +1,21 @@
 package zeroday.Routes.Settings
 
 
-import zeroday.Models.dto.subject.SubjectRequest
-import zeroday.Queries.Schedules.SubjectRepository
+import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.routing.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.server.auth.*
-import io.ktor.http.*
-import java.util.UUID
+import io.ktor.server.routing.*
+import zeroday.Models.dto.subject.SubjectRequest
+import zeroday.Queries.Schedules.SubjectRepository
+import java.util.*
 
 
 fun Application.subjectRoutes() {
     routing {
         authenticate("auth-jwt") {
-            log.info("✅ SubjectRoutes LOADED")
+            log.info("SubjectRoutes LOADED")
 
             route("/settings/subjects") {
 

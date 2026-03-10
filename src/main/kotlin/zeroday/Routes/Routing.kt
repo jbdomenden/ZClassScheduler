@@ -23,10 +23,7 @@ fun Application.configureRouting() {
         get("/") { call.respondRedirect("/ZClassScheduler/html/Login.html") }
 
         // ---------- STATIC FILES ----------
-        staticResources(
-            "/ZClassScheduler",
-            "static/ZClassScheduler"
-        )
+        staticResources("/ZClassScheduler", "static/ZClassScheduler")
 
         // ---------- AUTH ----------
         authRoutes()
@@ -60,15 +57,8 @@ fun Application.configureRouting() {
 
         // Browsers often probe /favicon.ico even when pages declare a <link rel="icon">.
         // Keep this working without exposing the entire classpath static root.
-        get("/favicon.ico") {
-            call.respondRedirect("/ZClassScheduler/Assets/zclassscheduler.ico", permanent = true)
-        }
-        get("/zclassscheduler.ico") {
-            call.respondRedirect("/ZClassScheduler/Assets/zclassscheduler.ico", permanent = true)
-        }
-
-        // ---------- REDIRECTS ----------
-        get("/ZCSDash") { call.respondRedirect("/ZClassScheduler/html/Dashboard.html") }
+        get("/favicon.ico") { call.respondRedirect("/ZClassScheduler/Assets/zclassscheduler.ico", permanent = true) }
+        get("/zclassscheduler.ico") { call.respondRedirect("/ZClassScheduler/Assets/zclassscheduler.ico", permanent = true) }
 
         // ---------- HEALTH ----------
         get("/health") { call.respondText("OK") }
