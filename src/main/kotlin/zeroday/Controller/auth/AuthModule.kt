@@ -114,7 +114,12 @@ fun Route.authRoutes() {
 
                     val roleNorm = normalizeRole(user.role)
                     val forcePasswordChange = when (roleNorm) {
-                        "SUPER_ADMIN" -> PasswordCrypto.verify("admin123", user.passwordSalt, user.passwordHash)
+                        // Bootstrap super admin should be able to open directly to dashboard.
+                        "SUPER_ADMIN" -> {
+                            val isBootstrap = email == "admin@zcs.edu"
+                            if (isBootstrap) false
+                            else PasswordCrypto.verify("admin123", user.passwordSalt, user.passwordHash)
+                        }
                         "ADMIN", "CHECKER" -> {
                             val t = TeacherRepository.findIdentityByEmail(email)
                             if (t == null) false
