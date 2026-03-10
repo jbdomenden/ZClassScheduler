@@ -158,7 +158,7 @@ async function redirectAfterLogin(token) {
         // fall through
     }
 
-    window.location.href = "/ZCSDash";
+    window.location.href = "/ZClassScheduler/html/Dashborad.html";
 }
 
 async function requirePasswordChange({ token, oldPassword }) {

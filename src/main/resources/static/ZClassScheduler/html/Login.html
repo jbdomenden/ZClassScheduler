@@ -6,8 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Login page styles (kept external to maintain separation of concerns) -->
-    <link rel="stylesheet" href="../CSS/base.css" />
-    <link rel="stylesheet" href="../CSS/Login.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/Login.css" />
     <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
     <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
@@ -41,7 +41,7 @@
     <!-- IMPORTANT: Form submission is handled by ../JS/Login.js (preventDefault + async) -->
     <form id="loginForm">
         <!-- Email input (HTML validation via type="email" + required) -->
-        <input type="email" id="email" placeholder="Microsoft Email" required />
+        <input type="email" id="email" placeholder="Email" required />
 
         <!-- Password input (required; actual auth handled in Login.js) -->
         <input type="password" id="password" placeholder="Password" required />
@@ -64,6 +64,6 @@
 </div>
 
 <!-- Page behavior and login flow logic -->
-<script src="../JS/Login.js"></script>
+<script src="../js/Login.js"></script>
 </body>
 </html>

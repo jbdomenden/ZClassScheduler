@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ZClassScheduler</title>
 
-    <link rel="stylesheet" href="../CSS/base.css" />
-    <link rel="stylesheet" href="../CSS/ManageDesign.css" />
-    <link rel="stylesheet" href="../CSS/SchedulerDesign.css" />
+    <link rel="stylesheet" href="../css/base.css" />
+    <link rel="stylesheet" href="../css/ManageDesign.css" />
+    <link rel="stylesheet" href="../css/SchedulerDesign.css" />
     <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
     <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
@@ -24,8 +24,8 @@
     <main class="crud-scope">
 
         <div class="page-header">
-            <h2>Tertiary Schedule</h2>
-            <p class="subtitle">Create section blocks, assign schedules, and manage electives</p>
+            <h2>SHS Schedule</h2>
+            <p class="subtitle">Create section blocks, then assign day/time/room/instructor</p>
         </div>
 
         <section class="panel">
@@ -34,7 +34,7 @@
                 <div id="searchContainer"></div>
 
                 <div class="panel-actions">
-            <button id="addBlockBtn" class="btn btn-primary" type="button" data-tooltip="Add a new class schedule">+ Add Schedule</button>
+            <button id="addScheduleBtn" class="btn btn-primary" type="button" data-tooltip="Add a new class schedule">+ Add Schedule</button>
             <button id="refreshBtn" class="btn btn-secondary" type="button" data-tooltip="Reload schedules">Refresh</button>
                 </div>
             </div>
@@ -45,7 +45,7 @@
                     <tr>
                         <th data-key="sectionCode">Section<span class="sort-icon"></span></th>
                         <th data-key="courseCode">Program<span class="sort-icon"></span></th>
-                        <th data-key="year">Year<span class="sort-icon"></span></th>
+                        <th data-key="year">Grade<span class="sort-icon"></span></th>
                         <th data-key="term">Term<span class="sort-icon"></span></th>
                         <th data-key="active">Status<span class="sort-icon"></span></th>
                         <th width="210">Actions</th>
@@ -69,7 +69,7 @@
             <div class="form-grid">
 
                 <div class="form-field">
-                    <label>Program / Course</label>
+                    <label>Strand / Program</label>
                     <select id="programSelect" required>
                         <option value="" disabled selected>Select Program</option>
                     </select>
@@ -83,13 +83,11 @@
                 </div>
 
                 <div class="form-field">
-                    <label>Year</label>
+                    <label>Grade</label>
                     <select id="yearSelect" required>
-                        <option value="" disabled selected>Select Year</option>
-                        <option value="1">1st Year</option>
-                        <option value="2">2nd Year</option>
-                        <option value="3">3rd Year</option>
-                        <option value="4">4th Year</option>
+                        <option value="" disabled selected>Select Grade</option>
+                        <option value="11">Grade 11</option>
+                        <option value="12">Grade 12</option>
                     </select>
                 </div>
 
@@ -104,12 +102,8 @@
 
             </div>
 
-            <div class="hint">
-                Section will auto-generate as: <b>{COURSE}{LEVEL}{COUNT}</b> (Example: <b>BI101</b>)
-            </div>
-
             <div class="modal-actions">
-                <button type="submit" class="btn btn-primary">Create</button>
+                <button type="submit" class="btn btn-primary">Create Block</button>
                 <button type="button" id="wizardCancelBtn" class="btn btn-secondary">Cancel</button>
             </div>
         </form>
@@ -120,12 +114,10 @@
 <div id="editRowModal" class="modal hidden">
     <div class="modal-content">
         <h3 id="editRowTitle">Edit Schedule</h3>
-
         <form id="editRowForm" class="crud-scope">
-            <input type="hidden" id="editScheduleId" />
 
             <label>Day</label>
-            <select id="editDay">
+            <select id="daySelect">
                 <option value="">(Unset)</option>
                 <option value="MONDAY">MONDAY</option>
                 <option value="TUESDAY">TUESDAY</option>
@@ -133,31 +125,32 @@
                 <option value="THURSDAY">THURSDAY</option>
                 <option value="FRIDAY">FRIDAY</option>
                 <option value="SATURDAY">SATURDAY</option>
+                <option value="SUNDAY">SUNDAY</option>
             </select>
 
             <div class="form-row">
                 <div class="form-field">
                     <label>Time Start</label>
-                    <select id="editStart">
+                    <select id="timeStartSelect">
                         <option value="">(Unset)</option>
                     </select>
                 </div>
 
                 <div class="form-field">
                     <label>Time End</label>
-                    <select id="editEnd">
+                    <select id="timeEndSelect">
                         <option value="">(Unset)</option>
                     </select>
                 </div>
             </div>
 
             <label>Room</label>
-            <select id="editRoom">
+            <select id="roomSelect">
                 <option value="">(Unset)</option>
             </select>
 
             <label>Instructor</label>
-            <select id="editTeacher">
+            <select id="instructorSelect">
                 <option value="">(Unset)</option>
             </select>
 
@@ -177,8 +170,9 @@
     </div>
 </div>
 
-<script src="../JS/load-global.js"></script>
-<script src="../JS/GlobalSidebar.js"></script>
-<script type="module" src="../JS/SchedulerSTI.js"></script>
+<script src="../js/load-global.js"></script>
+<script src="../js/GlobalSidebar.js"></script>
+<script type="module" src="../js/SchedulerSHS.js"></script>
+
 </body>
 </html>
