@@ -1,13 +1,13 @@
 package zeroday
 
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
-import io.ktor.server.netty.EngineMain
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.contentnegotiation.*
+import zeroday.Controller.auth.configureSecurity
 import zeroday.Models.db.DatabaseFactory
 import zeroday.Models.db.bootstrap.SuperAdminBootstrap
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.plugins.contentnegotiation.*
 import zeroday.Queries.Login.UserRepositoryImpl
-import zeroday.Controller.auth.configureSecurity
 import zeroday.Routes.configureRouting
 
 fun main(args: Array<String>) {
@@ -26,4 +26,6 @@ fun Application.module() {
     configureSecurity()
 
     configureRouting()
+
+
 }
