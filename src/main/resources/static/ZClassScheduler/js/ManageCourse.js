@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    MANAGE COURSE (DB-backed)
 ========================================================= */
 
@@ -147,7 +147,7 @@ let editingId = null;
 
 async function apiList() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return [];
     }
     const res = await fetch(API_BASE, { headers: { ...authHeaders() } });
@@ -205,7 +205,7 @@ async function safeJson(res) {
 /* ================= SEARCH COMPONENT ================= */
 
 async function loadSearchComponent() {
-    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const response = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     const html = await response.text();
 
     const container = document.getElementById("searchContainer");

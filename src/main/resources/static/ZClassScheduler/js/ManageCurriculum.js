@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    MANAGE CURRICULUM (DB-backed + PDF parser + Dept + Hard Delete)
    + AUTO DETECT CURRICULUM CODE FROM PDF
 
@@ -282,7 +282,7 @@ async function loadSearchComponent() {
     const container = document.getElementById("searchContainer");
     if (!container) return;
 
-    const res = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const res = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     container.innerHTML = await res.text();
 
     searchInput = document.querySelector("#searchInput");
@@ -1368,7 +1368,7 @@ function escapeHtml(str) {
 
 (async function init() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
     await loadSearchComponent();

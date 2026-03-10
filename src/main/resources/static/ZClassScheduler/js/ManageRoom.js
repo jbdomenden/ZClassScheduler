@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    ROOM MANAGEMENT MODULE
    ZClassScheduler
 ========================================================= */
@@ -36,7 +36,7 @@ function apiTypeToUi(type) {
 
 async function fetchRooms() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
 
@@ -106,7 +106,7 @@ let editingId = null;
 ========================================================= */
 
 async function loadSearchComponent() {
-    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const response = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     const html = await response.text();
 
     document.getElementById("searchContainer").innerHTML = html;
