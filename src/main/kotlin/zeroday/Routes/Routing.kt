@@ -24,8 +24,9 @@ fun Application.configureRouting() {
         get("/login") { call.respondRedirect("/ZClassScheduler/html/Login.html") }
 
         // ---------- STATIC FILES ----------
-        staticResources("/ZClassScheduler", "static/ZClassScheduler")
-
+        static("/") {
+            resources("static")
+        }
         // ---------- AUTH ----------
         authRoutes()
 

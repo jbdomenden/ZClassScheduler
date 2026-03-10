@@ -24,8 +24,5 @@ fun Application.module() {
 
     // Must be installed before any routes use authenticate("auth-jwt")
     configureSecurity()
-
     configureRouting()
-
-
-}
+    }
