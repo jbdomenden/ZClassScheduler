@@ -64,6 +64,11 @@ function isStaffAdmin() {
     return CURRENT_USER.role === "ADMIN" && CURRENT_USER.depts && CURRENT_USER.depts.has("STAFF");
 }
 
+
+function isVisibleInUserManagementTable(teacher) {
+    return normalizeRole(teacher?.role) !== "SUPER_ADMIN";
+}
+
 function canManageUser(targetTeacher) {
     if (!targetTeacher) return false;
     if (CURRENT_USER.role === "SUPER_ADMIN") return true;
@@ -846,7 +851,7 @@ async function loadSearchComponent() {
 function renderTeachers(data = teacherDB) {
     tableBody.innerHTML = "";
 
-    const sorted = applySort(data);
+    const sorted = applySort((data || []).filter(isVisibleInUserManagementTable));
 
     if (!sorted.length) {
         tableBody.innerHTML = `
@@ -957,12 +962,14 @@ function handleSearch() {
     const value = (searchInput?.value || "").toLowerCase().trim();
 
     const filtered = teacherDB.filter(t =>
-        (t.firstName || "").toLowerCase().includes(value) ||
-        (t.lastName || "").toLowerCase().includes(value) ||
-        (t.department || "").toLowerCase().includes(value) ||
-        (t.email || "").toLowerCase().includes(value) ||
-        (t.role || "").toLowerCase().includes(value) ||
-        (t.status || "").toLowerCase().includes(value)
+        isVisibleInUserManagementTable(t) && (
+            (t.firstName || "").toLowerCase().includes(value) ||
+            (t.lastName || "").toLowerCase().includes(value) ||
+            (t.department || "").toLowerCase().includes(value) ||
+            (t.email || "").toLowerCase().includes(value) ||
+            (t.role || "").toLowerCase().includes(value) ||
+            (t.status || "").toLowerCase().includes(value)
+        )
     );
 
     renderTeachers(filtered);

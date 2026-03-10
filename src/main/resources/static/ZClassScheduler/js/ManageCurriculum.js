@@ -654,7 +654,7 @@ async function toggleCurriculum(id) {
    UPLOAD MODAL
 ============================ */
 
-uploadBtn.addEventListener("click", async () => {
+if (uploadBtn) uploadBtn.addEventListener("click", async () => {
     uploadForm.reset();
     resetUploadDetectedFields();
     setUploadInputsEnabled(false);
@@ -663,7 +663,7 @@ uploadBtn.addEventListener("click", async () => {
     if (deptSelect) deptSelect.focus();
 });
 
-closeUploadModalBtn.addEventListener("click", () => {
+if (closeUploadModalBtn) closeUploadModalBtn.addEventListener("click", () => {
     uploadModal.classList.add("hidden");
 });
 
@@ -872,7 +872,7 @@ pdfInput.addEventListener("change", async () => {
     }
 });
 
-uploadForm.addEventListener("submit", async (e) => {
+if (uploadForm) uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     try {
@@ -918,7 +918,7 @@ uploadForm.addEventListener("submit", async (e) => {
         overlaySetState({ title: "Uploading Curriculum...", sub: "Sending data to server...", percent: 100 });
 
         await apiUploadCurriculum({
-            courseCode: program,
+            courseCode: prog,
             name: curriculumCode,
             dept,
             subjects: parsed.subjects
