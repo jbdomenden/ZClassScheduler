@@ -1,4 +1,4 @@
-const API = {
+﻿const API = {
   blocks: "/api/scheduler/jhs/blocks",
   createBlock: "/api/scheduler/jhs/blocks",
   deleteBlock: (section) => `/api/scheduler/jhs/blocks/${encodeURIComponent(section)}`,
@@ -503,7 +503,7 @@ async function loadSearchComponent() {
   const container = document.getElementById("searchContainer");
   if (!container) return;
 
-  const res = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+  const res = await fetch("/ZClassScheduler/html/GlobalSearch.html");
   container.innerHTML = await res.text();
 
   searchInput = document.querySelector("#searchInput");
