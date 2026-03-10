@@ -1,4 +1,4 @@
-// Dashboard.js (module)
+﻿// Dashboard.js (module)
 // Room Overview uses the same time-slot table grid feel as SchedulesRoom,
 // but with rooms as the column headers.
 
@@ -623,7 +623,7 @@ async function loadConflicts() {
 async function init() {
   if (!token) {
     // Keep it simple: redirect to login if dashboard is opened without auth.
-    window.location.href = "/ZclassScheduler/html/Login.html";
+    window.location.href = "/ZClassScheduler/html/Login.html";
     return;
   }
 
