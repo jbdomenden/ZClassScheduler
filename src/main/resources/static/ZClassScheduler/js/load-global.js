@@ -1535,9 +1535,9 @@
     enforceDirectUrlRules(role);
 
     await Promise.all([
-        inject("global-header", "../HTML/GlobalHeader.html", "header"),
-        inject("global-nav", "../HTML/GlobalSidebar.html", "nav"),
-        inject("searchContainer", "../HTML/GlobalSearch.html", "search")
+        inject("global-header", "/ZclassScheduler/html/GlobalHeader.html", "header"),
+        inject("global-nav", "/ZclassScheduler/html/GlobalSidebar.html", "nav"),
+        inject("searchContainer", "/ZclassScheduler/html/GlobalSearch.html", "search")
     ]);
 
     // Apply role visibility again after partials are injected (prevents a brief flash of restricted links).

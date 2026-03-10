@@ -623,7 +623,7 @@ async function loadConflicts() {
 async function init() {
   if (!token) {
     // Keep it simple: redirect to login if dashboard is opened without auth.
-    window.location.href = "../HTML/Login.html";
+    window.location.href = "/ZclassScheduler/html/Login.html";
     return;
   }
 

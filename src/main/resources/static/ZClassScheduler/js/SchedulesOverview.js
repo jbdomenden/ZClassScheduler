@@ -296,7 +296,7 @@ function initSearch() {
 
 async function loadSearchComponent() {
 
-    const response = await fetch("../HTML/GlobalSearch.html");
+    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
     const html = await response.text();
 
     document.getElementById("searchContainer").innerHTML = html;

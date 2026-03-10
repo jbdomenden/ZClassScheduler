@@ -282,7 +282,7 @@ async function loadSearchComponent() {
     const container = document.getElementById("searchContainer");
     if (!container) return;
 
-    const res = await fetch("../HTML/GlobalSearch.html");
+    const res = await fetch("/ZclassScheduler/html/GlobalSearch.html");
     container.innerHTML = await res.text();
 
     searchInput = document.querySelector("#searchInput");
@@ -1368,7 +1368,7 @@ function escapeHtml(str) {
 
 (async function init() {
     if (!token) {
-        window.location.href = "../HTML/Login.html";
+        window.location.href = "/ZclassScheduler/html/Login.html";
         return;
     }
     await loadSearchComponent();

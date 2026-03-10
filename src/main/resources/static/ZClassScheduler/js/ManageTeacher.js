@@ -170,7 +170,7 @@ async function loadCurrentUserContext() {
 
     const res = await fetch(API_ME, { headers: { ...authHeaders(), Accept: "application/json" } });
     if (res.status === 401 || res.status === 403) {
-        window.location.href = "../HTML/Login.html";
+        window.location.href = "/ZclassScheduler/html/Login.html";
         return;
     }
     if (!res.ok) return;
@@ -236,7 +236,7 @@ let editingId = null;
 
 async function fetchTeachers() {
     if (!token) {
-        window.location.href = "../HTML/Login.html";
+        window.location.href = "/ZclassScheduler/html/Login.html";
         return;
     }
 
@@ -818,7 +818,7 @@ async function openAdminTimeModal(teacherId) {
 /* ================= SEARCH LOAD ================= */
 
 async function loadSearchComponent() {
-    const response = await fetch("../HTML/GlobalSearch.html");
+    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
     const html = await response.text();
     document.getElementById("searchContainer").innerHTML = html;
 
