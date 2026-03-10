@@ -1,4 +1,4 @@
-const API = {
+﻿const API = {
   blocks: "/api/scheduler/jhs/blocks",
   createBlock: "/api/scheduler/jhs/blocks",
   deleteBlock: (section) => `/api/scheduler/jhs/blocks/${encodeURIComponent(section)}`,
@@ -304,6 +304,52 @@ function findSectionKeyForRowId(rowId) {
   return "";
 }
 
+async function fetchAllSchedulerRowsForSuggestion() {
+  const endpoints = [
+    "/api/scheduler/tertiary/blocks",
+    "/api/scheduler/namei/blocks",
+    "/api/scheduler/shs/blocks",
+    "/api/scheduler/jhs/blocks",
+  ];
+
+  const results = await Promise.all(endpoints.map(async (url) => {
+    try {
+      const res = await fetch(url, { headers: { "Accept": "application/json", ...authHeaders() } });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+
+      const out = [];
+      data.forEach((b) => {
+        const sectionKey = String(b?.sectionCode || b?.section || "").trim();
+        (b?.rows || []).forEach((r) => {
+          const day = String(r?.dayOfWeek || "").trim().toUpperCase();
+          const start = String(r?.timeStart || "").trim();
+          const end = String(r?.timeEnd || "").trim();
+          if (!day || !start || !end) return;
+          const sm = hhmmToMinutes(start);
+          const em = hhmmToMinutes(end);
+          if (sm == null || em == null || em <= sm) return;
+          out.push({
+            id: String(r?.id || ""),
+            day,
+            sm,
+            em,
+            roomId: r?.roomId ? String(r.roomId) : "",
+            teacherId: r?.teacherId ? String(r.teacherId) : "",
+            sectionKey,
+          });
+        });
+      });
+      return out;
+    } catch (_) {
+      return [];
+    }
+  }));
+
+  return results.flat();
+}
+
 async function suggestForEditModal() {
   if (!editSuggestBox) return;
   editSuggestBox.textContent = "";
@@ -335,7 +381,17 @@ async function suggestForEditModal() {
       .sort((a, b) => Math.abs(a - duration) - Math.abs(b - duration))[0];
   }
 
-  const allRows = flattenScheduledRows().filter((r) => r.id !== schedId);
+  const localRows = flattenScheduledRows();
+  const globalRows = await fetchAllSchedulerRowsForSuggestion();
+  const seen = new Set();
+  const allRows = [...localRows, ...globalRows]
+    .filter((r) => r.id !== schedId)
+    .filter((r) => {
+      const k = `${r.id}|${r.day}|${r.sm}|${r.em}|${r.roomId}|${r.teacherId}|${r.sectionKey}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
 
   const daysBase = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
   const dayCandidates = dayPref && daysBase.includes(dayPref)
@@ -503,7 +559,7 @@ async function loadSearchComponent() {
   const container = document.getElementById("searchContainer");
   if (!container) return;
 
-  const res = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+  const res = await fetch("/ZClassScheduler/html/GlobalSearch.html");
   container.innerHTML = await res.text();
 
   searchInput = document.querySelector("#searchInput");
