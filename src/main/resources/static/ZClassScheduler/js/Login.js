@@ -292,6 +292,12 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         rememberMe: !!rememberEl?.checked,
     };
 
+    function showLoginError(message) {
+        // Ensure the loading overlay is removed before opening modal alerts.
+        setLoginLoading(false);
+        appAlert(message);
+    }
+
     try {
         const res = await fetch("/api/auth/login", {
             method: "POST",
@@ -303,7 +309,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
             const data = await res.json().catch(() => null);
             const token = data?.token;
             if (!token) {
-                appAlert("Login succeeded, but no token was returned. Please contact the administrator.");
+                showLoginError("Login succeeded, but no token was returned. Please contact the administrator.");
                 return;
             }
 
@@ -334,11 +340,11 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
             // NOTE: Response may not be JSON; ignore parse errors and keep default message.
         }
 
-        appAlert(msg);
+        showLoginError(msg);
     } catch (err) {
         // Network / unexpected failure path (fetch throws).
         console.error("Login failed:", err);
-        appAlert("Unable to login right now. Please check your connection and try again.");
+        showLoginError("Unable to login right now. Please check your connection and try again.");
     } finally {
         // IMPORTANT: Always clear loading state, even after errors or early returns.
         setLoginLoading(false);

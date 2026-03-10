@@ -64,6 +64,11 @@ function isStaffAdmin() {
     return CURRENT_USER.role === "ADMIN" && CURRENT_USER.depts && CURRENT_USER.depts.has("STAFF");
 }
 
+
+function isVisibleInUserManagementTable(teacher) {
+    return normalizeRole(teacher?.role) !== "SUPER_ADMIN";
+}
+
 function canManageUser(targetTeacher) {
     if (!targetTeacher) return false;
     if (CURRENT_USER.role === "SUPER_ADMIN") return true;
@@ -170,7 +175,7 @@ async function loadCurrentUserContext() {
 
     const res = await fetch(API_ME, { headers: { ...authHeaders(), Accept: "application/json" } });
     if (res.status === 401 || res.status === 403) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
     if (!res.ok) return;
@@ -236,7 +241,7 @@ let editingId = null;
 
 async function fetchTeachers() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
 
@@ -818,7 +823,7 @@ async function openAdminTimeModal(teacherId) {
 /* ================= SEARCH LOAD ================= */
 
 async function loadSearchComponent() {
-    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const response = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     const html = await response.text();
     document.getElementById("searchContainer").innerHTML = html;
 
@@ -846,7 +851,7 @@ async function loadSearchComponent() {
 function renderTeachers(data = teacherDB) {
     tableBody.innerHTML = "";
 
-    const sorted = applySort(data);
+    const sorted = applySort((data || []).filter(isVisibleInUserManagementTable));
 
     if (!sorted.length) {
         tableBody.innerHTML = `
@@ -957,12 +962,14 @@ function handleSearch() {
     const value = (searchInput?.value || "").toLowerCase().trim();
 
     const filtered = teacherDB.filter(t =>
-        (t.firstName || "").toLowerCase().includes(value) ||
-        (t.lastName || "").toLowerCase().includes(value) ||
-        (t.department || "").toLowerCase().includes(value) ||
-        (t.email || "").toLowerCase().includes(value) ||
-        (t.role || "").toLowerCase().includes(value) ||
-        (t.status || "").toLowerCase().includes(value)
+        isVisibleInUserManagementTable(t) && (
+            (t.firstName || "").toLowerCase().includes(value) ||
+            (t.lastName || "").toLowerCase().includes(value) ||
+            (t.department || "").toLowerCase().includes(value) ||
+            (t.email || "").toLowerCase().includes(value) ||
+            (t.role || "").toLowerCase().includes(value) ||
+            (t.status || "").toLowerCase().includes(value)
+        )
     );
 
     renderTeachers(filtered);
