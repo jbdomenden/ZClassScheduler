@@ -20,7 +20,8 @@ fun Application.configureRouting() {
 
     routing {
 
-        get("/") { call.respondRedirect("/ZClassScheduler/html/Login.html") }
+        get("/") { call.respondRedirect("/login") }
+        get("/login") { call.respondRedirect("/ZClassScheduler/html/Login.html") }
 
         // ---------- STATIC FILES ----------
         staticResources("/ZClassScheduler", "static/ZClassScheduler")
