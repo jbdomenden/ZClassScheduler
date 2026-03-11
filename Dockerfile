@@ -2,8 +2,12 @@
 FROM gradle:8.14.3-jdk17 AS build
 WORKDIR /home/app
 COPY . .
-# Compile and package the application.  Using ./gradlew ensures the correct Gradle version is used.
-RUN ./gradlew clean build -x test --no-daemon --stacktrace --info --console=plain
+# Resolve/configure first, then compile Kotlin in isolation so Render logs keep
+# compiler errors close to the end of the stream (easier to debug than full build tail).
+RUN ./gradlew help --no-daemon --stacktrace --console=plain
+RUN ./gradlew clean compileKotlin -x test --no-daemon --stacktrace --console=plain --warning-mode=all
+# Package the application after Kotlin compilation passes.
+RUN ./gradlew build -x test --no-daemon --stacktrace --console=plain
 
 # ---------- Runtime stage ----------
 # Use Eclipse Temurin for the JDK—this image is available on Docker Hub.
