@@ -1444,6 +1444,7 @@
         { file: "ManageCourse.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "AuditLogs.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "CheckerLogs.html", allow: ["CHECKER", "ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "ScheduleLogs.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
     ];
 
     function currentFileName() {

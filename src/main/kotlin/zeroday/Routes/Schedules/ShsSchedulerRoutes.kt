@@ -7,6 +7,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 import zeroday.Controller.auth.requireRole
+import zeroday.Controller.audit.auditScheduleChange
 import zeroday.Controller.service.SchedulerSHS_Service
 import zeroday.Models.dto.schedule.ShsCreateBlockRequest
 import zeroday.Models.dto.schedule.DuplicateScheduleRowRequest
@@ -45,6 +46,7 @@ fun Route.shsSchedulerRoutes() {
                         term = req.term
                     )
 
+                    call.auditScheduleChange(action = "SCHEDULE_BLOCK_CREATE", entityType = "ScheduleBlock", sectionCode = section, newValue = "Created block")
                     call.respond(HttpStatusCode.Created, mapOf("section" to section))
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to (e.message ?: "Invalid request")))
@@ -62,6 +64,7 @@ fun Route.shsSchedulerRoutes() {
                 }
                 if (!call.requireSchedulerWriteAccessBySection(claims, sectionCode)) return@delete
                 SchedulerSHS_Repository.deleteBlock(sectionCode)
+                call.auditScheduleChange(action = "SCHEDULE_BLOCK_DELETE", entityType = "ScheduleBlock", notes = "Deleted block")
                 call.respond(HttpStatusCode.NoContent)
             }
 
@@ -84,6 +87,7 @@ fun Route.shsSchedulerRoutes() {
                     return@post
                 }
 
+                call.auditScheduleChange(action = "SCHEDULE_ROW_CREATE", entityType = "ScheduleRow", entityId = newId.toString(), notes = "Duplicated row")
                 call.respond(HttpStatusCode.Created, mapOf("id" to newId.toString()))
             }
 
@@ -107,6 +111,7 @@ fun Route.shsSchedulerRoutes() {
                     )
                 }
 
+                call.auditScheduleChange(action = "SCHEDULE_ROW_DELETE", entityType = "ScheduleRow", entityId = id.toString(), notes = "Deleted duplicated row")
                 call.respond(HttpStatusCode.NoContent)
             }
 
@@ -141,6 +146,7 @@ fun Route.shsSchedulerRoutes() {
                         roomId = roomId,
                         teacherId = teacherId
                     )
+                    call.auditScheduleChange(action = "SCHEDULE_ROW_UPDATE", entityType = "ScheduleRow", entityId = id.toString(), notes = "Updated schedule row")
                     call.respond(HttpStatusCode.OK)
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to (e.message ?: "Invalid schedule time")))

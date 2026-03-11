@@ -26,11 +26,11 @@ fun ApplicationCall.jwtClaimsOrNull(): JwtClaims? {
 suspend fun ApplicationCall.requireRole(allowed: Set<String>): JwtClaims? {
     val claims = jwtClaimsOrNull()
     if (claims == null) {
-        respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
+        respond(HttpStatusCode.Unauthorized, mapOf("success" to false, "message" to "Unauthorized", "code" to "UNAUTHORIZED"))
         return null
     }
     if (!RoleCatalog.satisfies(claims.role, allowed)) {
-        respond(HttpStatusCode.Forbidden, mapOf("message" to "Forbidden"))
+        respond(HttpStatusCode.Forbidden, mapOf("success" to false, "message" to "Forbidden", "code" to "FORBIDDEN"))
         return null
     }
     return claims
