@@ -3,6 +3,7 @@ package zeroday.Queries.Settings
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import zeroday.Controller.security.PasswordCrypto
+import zeroday.Controller.auth.RoleCatalog
 import zeroday.Models.db.tables.Teachers
 import zeroday.Models.db.tables.UsersTable
 import java.util.*
@@ -21,28 +22,8 @@ object TeacherRepository {
     private fun blankToNull(s: String?): String? =
         s?.trim()?.takeIf { it.isNotEmpty() }
 
-    private fun normalizeRoleForStorage(roleRaw: String?): String {
-        val r0 = (roleRaw ?: "").trim()
-        if (r0.isEmpty()) return "TEACHER"
-
-        val r = r0
-            .trim()
-            .uppercase()
-            .replace("\\s+".toRegex(), "_")
-            .replace("-", "_")
-
-        return when (r) {
-            "SUPERADMIN" -> "SUPER_ADMIN"
-            "SUPER_ADMIN" -> "SUPER_ADMIN"
-            "ADMIN" -> "ADMIN"
-            "CHECKER" -> "CHECKER"
-            "NONTEACHING" -> "NON_TEACHING"
-            "NON_TEACHING" -> "NON_TEACHING"
-            "TEACHER" -> "TEACHER"
-            "INSTRUCTOR" -> "TEACHER"
-            else -> r
-        }
-    }
+    private fun normalizeRoleForStorage(roleRaw: String?): String =
+        RoleCatalog.normalize(roleRaw)
 
     private fun parseDepartments(raw: String?): Set<String> =
         (raw ?: "")
@@ -323,6 +304,6 @@ object TeacherRepository {
 
     fun isInstructorAssignable(teacherId: UUID): Boolean {
         val role = findRoleById(teacherId) ?: "TEACHER"
-        return role != "CHECKER" && role != "NON_TEACHING"
+        return role != "CHECKER" && role != "STAFF"
     }
 }

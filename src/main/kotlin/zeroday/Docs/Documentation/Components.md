@@ -13,7 +13,7 @@
 ## Models
 - `Models/db/*`
   - `DatabaseFactory` initializes Exposed and DB connection
-  - `bootstrap/*` seeds initial data (e.g., Super Admin)
+  - `bootstrap/*` seeds and reconciles initial data (e.g., enforces `admin@zcs.edu` as `SUPER_ADMIN` and syncs teacher department scope).
   - `tables/*` defines DB tables
 
 - `Models/dto/*`

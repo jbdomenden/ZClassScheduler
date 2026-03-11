@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    MANAGE CURRICULUM (DB-backed + PDF parser + Dept + Hard Delete)
    + AUTO DETECT CURRICULUM CODE FROM PDF
 
@@ -53,6 +53,7 @@ const manualCourseCode = document.getElementById("manualCourseCode");
 const manualCurriculumCode = document.getElementById("manualCurriculumCode");
 const manualTemplateBtn = document.getElementById("manualTemplateBtn");
 const manualAddRowBtn = document.getElementById("manualAddRowBtn");
+const manualAddElectiveBtn = document.getElementById("manualAddElectiveBtn");
 const manualSubjectsTbody = document.querySelector("#manualSubjectsTable tbody");
 
 let manualSubjects = [];
@@ -185,22 +186,57 @@ async function apiHardDeleteCurriculum(id) {
     await fetchJson(`${API_BASE}/${id}`, { method: "DELETE" });
 }
 
+async function apiCreateSubject(payload) {
+    return fetchJson(`/settings/subjects`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+}
+
+async function apiDeleteSubject(id) {
+    return fetchJson(`/settings/subjects/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 /* ============================
    MANUAL CREATE HELPERS
 ============================ */
 
 function yearTermChoicesForDept(deptRaw) {
     const d = String(deptRaw || "").trim().toUpperCase();
-    const max = (d === "JHS" || d === "SHS") ? 4 : 8;
-    return Array.from({ length: max }, (_, i) => String(i + 1));
+    const base = [
+        { value: "1", label: "1Y1T" },
+        { value: "2", label: "1Y2T" },
+        { value: "3", label: "2Y1T" },
+        { value: "4", label: "2Y2T" },
+    ];
+
+    if (d === "JHS" || d === "SHS") {
+        return base;
+    }
+
+    return [
+        ...base,
+        { value: "5", label: "3Y1T" },
+        { value: "6", label: "3Y2T" },
+        { value: "7", label: "4Y1T" },
+        { value: "8", label: "4Y2T" },
+        { value: "9", label: "Elective Block" },
+    ];
+}
+
+function isTertiaryDept(deptRaw) {
+    const d = String(deptRaw || "").trim().toUpperCase();
+    return d === "TERTIARY_STI" || d === "TERTIARY_NAMEI";
 }
 
 function ensureManualRow(idx) {
-    if (!manualSubjects[idx]) manualSubjects[idx] = { yearTerm: "1", code: "", name: "" };
+    if (!manualSubjects[idx]) manualSubjects[idx] = { yearTerm: "1", code: "", name: "", electiveSub: "" };
     const r = manualSubjects[idx];
     r.yearTerm = String(r.yearTerm || "1").trim() || "1";
     r.code = String(r.code || "").trim();
     r.name = String(r.name || "").trim();
+    r.electiveSub = String(r.electiveSub || "").trim();
     return r;
 }
 
@@ -209,6 +245,7 @@ function renderManualSubjects() {
 
     const dept = String(manualDeptSelect?.value || "").trim();
     const choices = yearTermChoicesForDept(dept);
+    const isTertiary = isTertiaryDept(dept);
 
     if (!manualSubjects.length) {
         manualSubjectsTbody.innerHTML = `<tr><td colspan="4" class="muted">No subjects yet. Click "Create Template" or "Add Subject Row".</td></tr>`;
@@ -217,7 +254,7 @@ function renderManualSubjects() {
 
     manualSubjectsTbody.innerHTML = manualSubjects.map((row, idx) => {
         const r = ensureManualRow(idx);
-        const opts = choices.map((c) => `<option value="${escapeHtml(c)}" ${String(r.yearTerm) === String(c) ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
+        const opts = choices.map((c) => `<option value="${escapeHtml(c.value)}" ${String(r.yearTerm) === String(c.value) ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
 
         return `
 <tr data-idx="${idx}">
@@ -231,6 +268,7 @@ function renderManualSubjects() {
   </td>
   <td>
     <input data-field="name" value="${escapeHtml(r.name)}" placeholder="e.g. Introduction to Computing" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%;" />
+    ${isTertiary && String(r.yearTerm) === "9" ? `<input data-field="electiveSub" value="${escapeHtml(r.electiveSub || "")}" placeholder="Elective Block Name (e.g. Networking)" style="margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%;" />` : ``}
   </td>
   <td style="text-align:center;">
     <button type="button" class="btn btn-delete btn-icon" data-remove="${idx}" aria-label="Remove row">x</button>
@@ -282,7 +320,7 @@ async function loadSearchComponent() {
     const container = document.getElementById("searchContainer");
     if (!container) return;
 
-    const res = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const res = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     container.innerHTML = await res.text();
 
     searchInput = document.querySelector("#searchInput");
@@ -494,55 +532,20 @@ async function openCurriculum(id, clickedRow) {
 
     const curr = curriculumDB.find(c => String(c.id) === String(id));
     const dept = String(curr?.dept || "").toUpperCase();
+    const isTertiary = dept === "TERTIARY_STI" || dept === "TERTIARY_NAMEI";
 
     const subjects = await apiGetCurriculumSubjects(id);
 
-    const courses = (subjects || []).map(s => {
-        const yt = parseInt(s.yearTerm, 10);
+    const toWorking = (arr) => (arr || []).map((s) => {
         const { cleanName, electiveSub } = splitElectiveMarker(s.name || "");
-
-        let groupKey = "";
-
-        if (Number.isFinite(yt)) {
-            // Electives only apply to tertiary templates
-            if (yt === ELECTIVE_YT && (dept === "TERTIARY_STI" || dept === "TERTIARY_NAMEI")) {
-                groupKey = `Elective Course List (${electiveSub || "Electives"})`;
-            } else if (dept === "JHS") {
-                // JHS: yearTerm 1..4 => Grade 7..10
-                const grade = yt + 6; // 1->7, 2->8, 3->9, 4->10
-                groupKey = `Grade ${grade}`;
-            } else if (dept === "SHS") {
-                // SHS: yearTerm 1..4 => G11 Term 1..G12 Term 2
-                const map = {
-                    1: "G11 Term 1",
-                    2: "G11 Term 2",
-                    3: "G12 Term 1",
-                    4: "G12 Term 2"
-                };
-                groupKey = map[yt] || "SHS";
-            } else {
-                // Tertiary (default): yearTerm => Year/Term
-                const year = Math.ceil(yt / 2);
-                const term = (yt % 2 === 0) ? 2 : 1;
-                groupKey = `Year ${year} - Term ${term}`;
-            }
-        } else {
-            groupKey = "Ungrouped";
-        }
-
-        const m = String(s.code || "").match(/^([A-Z]+)(\d+)/);
-        const subjectArea = m ? m[1] : (s.code || "");
-        const catalogNo = m ? m[2] : "";
-
         return {
-            groupKey,
-            subjectArea,
-            catalogNo,
-            description: cleanName || ""
+            id: s.id ? String(s.id) : "",
+            code: String(s.code || "").trim(),
+            name: String(cleanName || "").trim(),
+            yearTerm: String(s.yearTerm || "").trim(),
+            electiveSub: String(electiveSub || "").trim(),
         };
     });
-
-    const grouped = groupByGroupKey(courses);
 
     const detailRow = document.createElement("tr");
     detailRow.classList.add("curriculum-detail");
@@ -550,11 +553,205 @@ async function openCurriculum(id, clickedRow) {
 
     detailRow.innerHTML = `
     <td colspan="5">
-      ${renderCourseTable(grouped)}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;">
+        <button class="btn btn-secondary" data-action="editMode">Edit Mode</button>
+      </div>
+      <div id="currViewWrap"></div>
+      <div id="currEditWrap" class="hidden"></div>
     </td>
   `;
 
     clickedRow.after(detailRow);
+
+    const viewWrap = detailRow.querySelector("#currViewWrap");
+    const editWrap = detailRow.querySelector("#currEditWrap");
+    const editBtn = detailRow.querySelector('[data-action="editMode"]');
+
+    function buildViewCourses(rows) {
+        return (rows || []).map(s => {
+            const yt = parseInt(s.yearTerm, 10);
+            const { cleanName, electiveSub } = splitElectiveMarker(s.name || "");
+            let groupKey = "";
+
+            if (Number.isFinite(yt)) {
+                if (yt === ELECTIVE_YT && isTertiary) {
+                    groupKey = `Elective Course List (${electiveSub || "Electives"})`;
+                } else if (dept === "JHS") {
+                    groupKey = `Grade ${yt + 6}`;
+                } else if (dept === "SHS") {
+                    const map = { 1: "G11 Term 1", 2: "G11 Term 2", 3: "G12 Term 1", 4: "G12 Term 2" };
+                    groupKey = map[yt] || "SHS";
+                } else {
+                    const year = Math.ceil(yt / 2);
+                    const term = (yt % 2 === 0) ? 2 : 1;
+                    groupKey = `Year ${year} - Term ${term}`;
+                }
+            } else {
+                groupKey = "Ungrouped";
+            }
+
+            const m = String(s.code || "").match(/^([A-Z]+)(\d+)/);
+            return {
+                groupKey,
+                subjectArea: m ? m[1] : (s.code || ""),
+                catalogNo: m ? m[2] : "",
+                description: cleanName || "",
+            };
+        });
+    }
+
+    function renderView(rows) {
+        const grouped = groupByGroupKey(buildViewCourses(rows));
+        viewWrap.innerHTML = renderCourseTable(grouped);
+    }
+
+    function renderEditor(working) {
+        const choices = yearTermChoicesForDept(dept);
+        const rowsHtml = (working || []).map((r, idx) => {
+            const opts = choices.map((c) => `<option value="${escapeHtml(c.value)}" ${String(r.yearTerm) === String(c.value) ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
+            return `
+              <tr data-idx="${idx}">
+                <td><select data-field="yearTerm">${opts}</select></td>
+                <td><input data-field="code" value="${escapeHtml(r.code)}" /></td>
+                <td>
+                  <input data-field="name" value="${escapeHtml(r.name)}" />
+                  ${isTertiary && String(r.yearTerm) === "9" ? `<input data-field="electiveSub" value="${escapeHtml(r.electiveSub || "")}" placeholder="Elective Block Name" style="margin-top:6px;" />` : ``}
+                </td>
+                <td><button class="btn btn-delete btn-icon" data-action="remove" data-idx="${idx}" type="button">x</button></td>
+              </tr>`;
+        }).join("");
+
+        editWrap.innerHTML = `
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+            <button type="button" class="btn btn-secondary" data-action="addSubject">Add Subject</button>
+            ${isTertiary ? `<button type="button" class="btn btn-secondary" data-action="addElective">Add Elective Block</button>` : ``}
+            <button type="button" class="btn btn-primary" data-action="saveEdit">Save</button>
+            <button type="button" class="btn btn-secondary" data-action="cancelEdit">Cancel</button>
+          </div>
+          <div class="table-wrapper"><table><thead><tr><th>Year/Term</th><th>Code</th><th>Description</th><th>Remove</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+        `;
+    }
+
+    let working = toWorking(subjects);
+    renderView(subjects);
+
+    editBtn?.addEventListener("click", () => {
+        viewWrap.classList.add("hidden");
+        editWrap.classList.remove("hidden");
+        editBtn.classList.add("hidden");
+        renderEditor(working);
+    });
+
+    editWrap?.addEventListener("input", (e) => {
+        const tr = e.target.closest("tr[data-idx]");
+        if (!tr) return;
+        const idx = parseInt(tr.dataset.idx, 10);
+        if (!Number.isFinite(idx) || !working[idx]) return;
+        const field = e.target.getAttribute("data-field");
+        if (!field) return;
+        working[idx][field] = String(e.target.value || "").trim();
+    });
+
+    editWrap?.addEventListener("change", (e) => {
+        const tr = e.target.closest("tr[data-idx]");
+        if (!tr) return;
+        const idx = parseInt(tr.dataset.idx, 10);
+        if (!Number.isFinite(idx) || !working[idx]) return;
+        const field = e.target.getAttribute("data-field");
+        if (!field) return;
+        working[idx][field] = String(e.target.value || "").trim();
+        if (field === "yearTerm") renderEditor(working);
+    });
+
+    editWrap?.addEventListener("click", async (e) => {
+        const action = e.target.getAttribute("data-action");
+        if (!action) return;
+
+        if (action === "remove") {
+            const idx = parseInt(e.target.getAttribute("data-idx"), 10);
+            if (Number.isFinite(idx)) {
+                working.splice(idx, 1);
+                renderEditor(working);
+            }
+            return;
+        }
+
+        if (action === "addSubject") {
+            working.push({ id: "", code: "", name: "", yearTerm: "1", electiveSub: "" });
+            renderEditor(working);
+            return;
+        }
+
+        if (action === "addElective") {
+            const sub = (prompt("Elective block name:", "Electives") || "").trim() || "Electives";
+            working.push({ id: "", code: "", name: "", yearTerm: "9", electiveSub: sub });
+            renderEditor(working);
+            return;
+        }
+
+        if (action === "cancelEdit") {
+            working = toWorking(await apiGetCurriculumSubjects(id));
+            renderView(await apiGetCurriculumSubjects(id));
+            viewWrap.classList.remove("hidden");
+            editWrap.classList.add("hidden");
+            editBtn.classList.remove("hidden");
+            return;
+        }
+
+        if (action === "saveEdit") {
+            const cleaned = working
+                .map((r) => {
+                    const yearTerm = String(r.yearTerm || "").trim();
+                    const code = String(r.code || "").trim();
+                    let name = String(r.name || "").trim();
+                    const electiveSub = String(r.electiveSub || "").trim() || "Electives";
+                    if (yearTerm === "9" && name && !/\[\[EL:[^\]]+\]\]\s*$/.test(name)) {
+                        name = `${name} [[EL:${electiveSub}]]`;
+                    }
+                    return { ...r, yearTerm, code, name };
+                })
+                .filter((r) => r.code && r.name && r.yearTerm);
+
+            if (!cleaned.length) {
+                appAlert("Please add at least one valid subject row before saving.");
+                return;
+            }
+
+            const original = toWorking(await apiGetCurriculumSubjects(id));
+            const originalById = new Map(original.filter((r) => r.id).map((r) => [r.id, r]));
+            const keptIds = new Set(cleaned.filter((r) => r.id).map((r) => r.id));
+
+            try {
+                // delete removed
+                for (const [sid] of originalById.entries()) {
+                    if (!keptIds.has(sid)) await apiDeleteSubject(sid);
+                }
+
+                // create new / replace edited
+                for (const r of cleaned) {
+                    const was = r.id ? originalById.get(r.id) : null;
+                    const changed = !!was && (was.code !== r.code || was.name !== r.name || was.yearTerm !== r.yearTerm);
+                    if (changed) {
+                        await apiDeleteSubject(r.id);
+                        await apiCreateSubject({ courseCode: String(curr?.program || "").trim().toUpperCase(), curriculumId: String(id), code: r.code, name: r.name, yearTerm: r.yearTerm });
+                    } else if (!r.id) {
+                        await apiCreateSubject({ courseCode: String(curr?.program || "").trim().toUpperCase(), curriculumId: String(id), code: r.code, name: r.name, yearTerm: r.yearTerm });
+                    }
+                }
+
+                const refreshed = await apiGetCurriculumSubjects(id);
+                working = toWorking(refreshed);
+                renderView(refreshed);
+                viewWrap.classList.remove("hidden");
+                editWrap.classList.add("hidden");
+                editBtn.classList.remove("hidden");
+                appAlert("Curriculum subjects updated.");
+            } catch (err) {
+                console.error(err);
+                appAlert(err?.message || "Unable to save curriculum subjects.");
+            }
+        }
+    });
 }
 
 function groupByGroupKey(courses) {
@@ -654,16 +851,23 @@ async function toggleCurriculum(id) {
    UPLOAD MODAL
 ============================ */
 
-uploadBtn.addEventListener("click", async () => {
-    uploadForm.reset();
+function openUploadModal() {
+    if (uploadForm) uploadForm.reset();
     resetUploadDetectedFields();
     setUploadInputsEnabled(false);
-    uploadModal.classList.remove("hidden");
-    // User must pick department first
+    if (uploadModal) uploadModal.classList.remove("hidden");
     if (deptSelect) deptSelect.focus();
+}
+
+if (uploadBtn) uploadBtn.addEventListener("click", openUploadModal);
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("#uploadBtn");
+    if (!btn) return;
+    e.preventDefault();
+    openUploadModal();
 });
 
-closeUploadModalBtn.addEventListener("click", () => {
+if (closeUploadModalBtn) closeUploadModalBtn.addEventListener("click", () => {
     uploadModal.classList.add("hidden");
 });
 
@@ -709,6 +913,7 @@ function syncManualControls() {
     const enabled = !!dept;
     if (manualTemplateBtn) manualTemplateBtn.disabled = !enabled;
     if (manualAddRowBtn) manualAddRowBtn.disabled = !enabled;
+    if (manualAddElectiveBtn) manualAddElectiveBtn.disabled = !enabled || !isTertiaryDept(dept);
 }
 
 if (manualCreateBtn) {
@@ -746,8 +951,21 @@ if (manualTemplateBtn) {
             return;
         }
 
-        const yt = yearTermChoicesForDept(dept);
-        manualSubjects = yt.map((v) => ({ yearTerm: v, code: "", name: "" }));
+        const yt = yearTermChoicesForDept(dept).filter((x) => x.value !== "9");
+        const seeded = [];
+        for (const level of yt) {
+            const answer = prompt(`How many subjects for ${level.label}?`, "0");
+            if (answer === null) return;
+            const count = Number.parseInt(String(answer).trim(), 10);
+            if (!Number.isFinite(count) || count < 0) {
+                appAlert(`Invalid number for ${level.label}. Please enter 0 or more.`);
+                return;
+            }
+            for (let i = 0; i < count; i += 1) {
+                seeded.push({ yearTerm: level.value, code: "", name: "", electiveSub: "" });
+            }
+        }
+        manualSubjects = seeded;
         renderManualSubjects();
     });
 }
@@ -759,7 +977,7 @@ if (manualAddRowBtn) {
             appAlert("Please select a Department first.");
             return;
         }
-        manualSubjects.push({ yearTerm: "1", code: "", name: "" });
+        manualSubjects.push({ yearTerm: "1", code: "", name: "", electiveSub: "" });
         renderManualSubjects();
     });
 }
@@ -777,11 +995,16 @@ if (manualCreateForm) {
         if (!code) return overlayError("Curriculum Code is required.");
 
         const subjects = (manualSubjects || [])
-            .map((r) => ({
-                code: String(r.code || "").trim(),
-                name: String(r.name || "").trim(),
-                yearTerm: String(r.yearTerm || "").trim(),
-            }))
+            .map((r) => {
+                const yearTerm = String(r.yearTerm || "").trim();
+                const code = String(r.code || "").trim();
+                let name = String(r.name || "").trim();
+                const electiveSub = String(r.electiveSub || "").trim() || "Electives";
+                if (yearTerm === "9" && name && !/\[\[EL:[^\]]+\]\]\s*$/.test(name)) {
+                    name = `${name} [[EL:${electiveSub}]]`;
+                }
+                return { code, name, yearTerm };
+            })
             .filter((r) => r.code && r.name && r.yearTerm);
 
         if (!subjects.length) {
@@ -872,7 +1095,7 @@ pdfInput.addEventListener("change", async () => {
     }
 });
 
-uploadForm.addEventListener("submit", async (e) => {
+if (uploadForm) uploadForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     try {
@@ -918,7 +1141,7 @@ uploadForm.addEventListener("submit", async (e) => {
         overlaySetState({ title: "Uploading Curriculum...", sub: "Sending data to server...", percent: 100 });
 
         await apiUploadCurriculum({
-            courseCode: program,
+            courseCode: prog,
             name: curriculumCode,
             dept,
             subjects: parsed.subjects
@@ -1368,7 +1591,7 @@ function escapeHtml(str) {
 
 (async function init() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
     await loadSearchComponent();

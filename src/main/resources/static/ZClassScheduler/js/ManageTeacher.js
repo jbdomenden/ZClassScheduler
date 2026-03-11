@@ -6,7 +6,7 @@
 const ALLOWED_DEPARTMENTS = [
     "ICT", "THM", "BM", "GE",
     "ME", "MT", "NA", "HS",
-    "STAFF"
+    "NON_TEACHING"
 ];
 
 const API_BASE = "/api/settings/teachers";
@@ -35,7 +35,8 @@ function normalizeRole(roleRaw) {
     if (r === "super_admin" || r === "superadmin" || r === "super admin") return "SUPER_ADMIN";
     if (r === "admin") return "ADMIN";
     if (r === "checker") return "CHECKER";
-    if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching") return "NON_TEACHING";
+    if (r === "staff") return "STAFF";
+    if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching") return "STAFF";
     if (r === "teacher") return "TEACHER";
     return String(roleRaw || "").trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_") || "TEACHER";
 }
@@ -61,7 +62,12 @@ function roleRankOf(roleRaw) {
 }
 
 function isStaffAdmin() {
-    return CURRENT_USER.role === "ADMIN" && CURRENT_USER.depts && CURRENT_USER.depts.has("STAFF");
+    return CURRENT_USER.role === "ADMIN" && CURRENT_USER.depts && CURRENT_USER.depts.has("NON_TEACHING");
+}
+
+
+function isVisibleInUserManagementTable(teacher) {
+    return normalizeRole(teacher?.role) !== "SUPER_ADMIN";
 }
 
 function canManageUser(targetTeacher) {
@@ -83,14 +89,14 @@ function canManageUser(targetTeacher) {
     // Requested restriction:
     // - Admin without STAFF dept: manage TEACHER only
     // - Admin with STAFF dept: manage CHECKER/NON_TEACHING only
-    if (isStaffAdmin()) return tr === "CHECKER" || tr === "NON_TEACHING";
+    if (isStaffAdmin()) return tr === "CHECKER" || tr === "STAFF";
     return tr === "TEACHER";
 }
 
 function allowedRolesForCurrentUser() {
-    if (CURRENT_USER.role === "SUPER_ADMIN") return ["TEACHER", "ADMIN", "CHECKER", "NON_TEACHING", "SUPER_ADMIN"];
+    if (CURRENT_USER.role === "SUPER_ADMIN" || CURRENT_USER.role === "ACADEMIC_HEAD") return ["TEACHER", "ADMIN", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL", "CHECKER", "STAFF", "SUPER_ADMIN", "ACADEMIC_HEAD"];
     if (CURRENT_USER.role === "ADMIN") {
-        if (isStaffAdmin()) return ["CHECKER", "NON_TEACHING"];
+        if (isStaffAdmin()) return ["CHECKER", "STAFF"];
         return ["TEACHER"];
     }
     return [];
@@ -127,7 +133,7 @@ function applyDepartmentOptionsFilter() {
     let allowed = null;
     if (CURRENT_USER.role === "ADMIN") {
         if (isStaffAdmin()) {
-            allowed = new Set(["STAFF"]);
+            allowed = new Set(["NON_TEACHING"]);
         } else {
             // Admins can only manage within their own depts; hide STAFF unless explicitly in depts.
             allowed = new Set([...CURRENT_USER.depts].filter(Boolean));
@@ -170,7 +176,7 @@ async function loadCurrentUserContext() {
 
     const res = await fetch(API_ME, { headers: { ...authHeaders(), Accept: "application/json" } });
     if (res.status === 401 || res.status === 403) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
     if (!res.ok) return;
@@ -236,7 +242,7 @@ let editingId = null;
 
 async function fetchTeachers() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return;
     }
 
@@ -818,7 +824,7 @@ async function openAdminTimeModal(teacherId) {
 /* ================= SEARCH LOAD ================= */
 
 async function loadSearchComponent() {
-    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const response = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     const html = await response.text();
     document.getElementById("searchContainer").innerHTML = html;
 
@@ -846,7 +852,7 @@ async function loadSearchComponent() {
 function renderTeachers(data = teacherDB) {
     tableBody.innerHTML = "";
 
-    const sorted = applySort(data);
+    const sorted = applySort((data || []).filter(isVisibleInUserManagementTable));
 
     if (!sorted.length) {
         tableBody.innerHTML = `
@@ -957,12 +963,14 @@ function handleSearch() {
     const value = (searchInput?.value || "").toLowerCase().trim();
 
     const filtered = teacherDB.filter(t =>
-        (t.firstName || "").toLowerCase().includes(value) ||
-        (t.lastName || "").toLowerCase().includes(value) ||
-        (t.department || "").toLowerCase().includes(value) ||
-        (t.email || "").toLowerCase().includes(value) ||
-        (t.role || "").toLowerCase().includes(value) ||
-        (t.status || "").toLowerCase().includes(value)
+        isVisibleInUserManagementTable(t) && (
+            (t.firstName || "").toLowerCase().includes(value) ||
+            (t.lastName || "").toLowerCase().includes(value) ||
+            (t.department || "").toLowerCase().includes(value) ||
+            (t.email || "").toLowerCase().includes(value) ||
+            (t.role || "").toLowerCase().includes(value) ||
+            (t.status || "").toLowerCase().includes(value)
+        )
     );
 
     renderTeachers(filtered);
