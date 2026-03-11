@@ -37,6 +37,10 @@ object DatabaseFactory {
                 RoomBlocks,
                 AuditLogs,
                 CheckerLogs,
+                ScheduleLogs,
+                SchoolHoursSettings,
+                SchoolDayRules,
+                AcademicBreaks,
                 Teachers
             )
         }

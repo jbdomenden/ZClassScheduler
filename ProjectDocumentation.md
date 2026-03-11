@@ -19,6 +19,7 @@ The core workflow is:
 Ktor module entry point is [`Application.kt`](/C:/Users/john.domenden/Music/GitHub/ZClassScheduler/src/main/kotlin/zeroday/Application.kt).
 
 - Initializes database and bootstraps a SUPER_ADMIN user (see `SuperAdminBootstrap`).
+- Bootstrap account: `admin@zcs.edu` / `admin123` (first run), role enforced as `SUPER_ADMIN`, teacher profile normalized to all departments (`ICT,THM,BM,GE,ME,MT,NA,HS,STAFF`).
 - Installs JSON ContentNegotiation.
 - Installs JWT auth via `configureSecurity()`.
 - Registers routes via `configureRouting()`.
@@ -73,7 +74,7 @@ For the full endpoint list, see [`ProjectEndPoints.md`](/C:/Users/john.domenden/
 
 ## Frontend Modules / Pages
 
-All pages live under `src/main/resources/static/ZClassScheduler/HTML` and are served under `/ZClassScheduler/HTML/<Page>.html`.
+All pages live under `src/main/resources/static/ZClassScheduler/html` and are served under `/ZClassScheduler/html/<Page>.html`.
 
 Shared UI fragments:
 - `GlobalHeader.html` and `GlobalSidebar.html` are injected by `load-global.js`.
@@ -183,6 +184,14 @@ These pages manage core reference data. They use `/api/settings/*` endpoints.
   - Page: `ManageCurriculum.html`
   - JS: `ManageCurriculum.js`
   - API: `/api/settings/curriculums` (+ `/upload` for parsed PDF upload)
+
+### Curriculum PDF Parser (Manage Curriculum)
+
+- Page: `ManageCurriculum.html`
+- Loader order: `pdf.min.js` (CDN) -> `ParserSTI.js` -> `ParserNAMEI.js` -> `ParserJHS.js` -> `ParserSHS.js` -> `ManageCurriculum.js`.
+- `ManageCurriculum.js` dispatches parser selection by department (`TERTIARY_STI`, `TERTIARY_NAMEI`, `JHS`, `SHS`).
+- NAMEI currently reuses STI parsing strategy via `NameiParser.parse(...)` delegating to `StiParser.parse(...)`.
+- Operational caveat: PDF parsing depends on CDN availability for `pdf.js` and `pdf.worker.min.js`.
 
 ## Data Model (Simplified)
 
