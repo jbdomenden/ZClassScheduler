@@ -1,9 +1,9 @@
 # ---------- Build stage ----------
-FROM gradle:8.6-jdk17 AS build
+FROM gradle:8.14.3-jdk17 AS build
 WORKDIR /home/app
 COPY . .
 # Compile and package the application.  Using ./gradlew ensures the correct Gradle version is used.
-RUN ./gradlew clean build -x test --no-daemon --stacktrace
+RUN ./gradlew clean build -x test --no-daemon --stacktrace --info --console=plain
 
 # ---------- Runtime stage ----------
 # Use Eclipse Temurin for the JDK—this image is available on Docker Hub.
