@@ -67,7 +67,7 @@ function isStaffAdmin() {
 
 
 function isVisibleInUserManagementTable(teacher) {
-    return normalizeRole(teacher?.role) !== "SUPER_ADMIN";
+    return normalizeRole(teacher?.firstname) !== "sample";
 }
 
 function canManageUser(targetTeacher) {
