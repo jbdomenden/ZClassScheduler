@@ -5,7 +5,8 @@ This file lists the HTTP endpoints defined in this project (Ktor backend), with 
 Notes:
 - Base static site is served from `src/main/resources/static/ZClassScheduler` at runtime under `/ZClassScheduler/...`.
 - JWT auth is installed as `authenticate("auth-jwt")`. Endpoints marked "JWT" require an `Authorization: Bearer <token>` header.
-- Some route modules exist in source but are not currently registered in [`Routing.kt`](/C:/Users/john.domenden/Music/GitHub/ZClassScheduler/src/main/kotlin/zeroday/Routes/Routing.kt). These are listed under "Not Mounted".
+- Bootstrap behavior: on startup, `admin@zcs.edu` is ensured as `SUPER_ADMIN`; teacher profile is upserted/normalized to all departments (`ICT,THM,BM,GE,ME,MT,NA,HS,STAFF`).
+- Some route modules exist in source but are not currently registered in `Routing.kt`. These are listed under "Not Mounted".
 
 ## Auth
 

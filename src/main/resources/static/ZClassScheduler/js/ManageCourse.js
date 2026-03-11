@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    MANAGE COURSE (DB-backed)
 ========================================================= */
 
@@ -138,6 +138,7 @@ const cancelBtn = document.getElementById("cancelBtn");
 const courseCode = document.getElementById("courseCode");
 const courseName = document.getElementById("courseName");
 const levelType = document.getElementById("levelType");
+const courseDepartment = document.getElementById("courseDepartment");
 const status = document.getElementById("status");
 
 let searchInput = null;
@@ -147,7 +148,7 @@ let editingId = null;
 
 async function apiList() {
     if (!token) {
-        window.location.href = "/ZclassScheduler/html/Login.html";
+        window.location.href = "/ZClassScheduler/html/Login.html";
         return [];
     }
     const res = await fetch(API_BASE, { headers: { ...authHeaders() } });
@@ -205,7 +206,7 @@ async function safeJson(res) {
 /* ================= SEARCH COMPONENT ================= */
 
 async function loadSearchComponent() {
-    const response = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+    const response = await fetch("/ZClassScheduler/html/GlobalSearch.html");
     const html = await response.text();
 
     const container = document.getElementById("searchContainer");
@@ -231,7 +232,7 @@ async function loadSearchComponent() {
     // Default: level then course name
     __setupSorter({
         tableId: "courseTable",
-        keyByIndex: ["code", "name", "levelType", "active", null],
+        keyByIndex: ["code", "name", "levelType", "department", "active", null],
     });
     __SORT_STATE__ = [{ key: "levelType", dir: "asc" }, { key: "name", dir: "asc" }];
     __updateSortUI();
@@ -247,7 +248,7 @@ function renderCourses(data = courseDB) {
     tableBody.innerHTML = "";
 
     if (!data.length) {
-        tableBody.innerHTML = `<tr><td colspan="5">No courses found.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="6">No courses found.</td></tr>`;
         return;
     }
 
@@ -259,6 +260,7 @@ function renderCourses(data = courseDB) {
       <td>${escapeHtml(c.code)}</td>
       <td>${escapeHtml(c.name)}</td>
       <td>${escapeHtml(levelLabel(c.levelType))}</td>
+      <td>${escapeHtml(c.department || "")}</td>
       <td class="${c.active ? "status-active" : "status-inactive"}">
         ${c.active ? "Active" : "Inactive"}
       </td>
@@ -289,6 +291,7 @@ function handleSearch() {
         (c.code || "").toLowerCase().includes(value) ||
         (c.name || "").toLowerCase().includes(value) ||
         (c.levelType || "").toLowerCase().includes(value) ||
+        (c.department || "").toLowerCase().includes(value) ||
         String(c.active ? "active" : "inactive").includes(value)
     );
     renderCourses(filtered);
@@ -303,6 +306,7 @@ async function loadCourses() {
         code: x.code,
         name: x.name,
         levelType: String(x.levelType),
+        department: String(x.department || ""),
         active: !!x.active,
     }));
     renderCourses();
@@ -316,7 +320,8 @@ form.addEventListener("submit", (e) => {
     const payload = {
         code: courseCode.value.trim(),
         name: courseName.value.trim(),
-        levelType: levelType.value
+        levelType: levelType.value,
+        department: String(courseDepartment?.value || "").trim().toUpperCase()
     };
 
     // client-side unique check by code (nice UX)
@@ -371,6 +376,7 @@ function openEditModal(id) {
     courseCode.value = c.code;
     courseName.value = c.name;
     levelType.value = c.levelType;
+    if (courseDepartment) courseDepartment.value = c.department || "";
     status.value = c.active ? "Active" : "Inactive";
 
     document.getElementById("modalTitle").textContent = "Edit Course";

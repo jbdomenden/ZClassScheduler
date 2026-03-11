@@ -110,7 +110,25 @@ th{font-size:12px;text-transform:uppercase;color:var(--text-muted);background:#f
 
 /* ================= ROOM GRID ================= */
 .room-grid{overflow:auto;max-height:520px;}
-.time-col{width:90px;background:#f8fafc;font-weight:600;}
+.time-col{
+    width:96px;
+    min-width:96px;
+    background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+    color:#334155;
+    font-weight:700;
+    text-align:center;
+    white-space:nowrap;
+    border-right:1px solid #dbe4ee;
+}
+
+.time-col.time-col-start{
+    color:#0f172a;
+}
+
+.time-col.time-col-end{
+    color:#475569;
+    border-right:2px solid #cbd5e1;
+}
 
 /* ================= SLOT ================= */
 .slot{background:rgba(37,99,235,.15);border-left:4px solid var(--slot);height:100%;padding:1px;font-size:11px;}
@@ -121,6 +139,32 @@ th{font-size:12px;text-transform:uppercase;color:var(--text-muted);background:#f
 #roomOverviewTable td.occupied{
     background: rgba(37,99,235,.10);
     vertical-align: middle;
+}
+
+/* Keep time columns visible while horizontally scrolling wide room overview grids. */
+#roomOverviewTable thead th[colspan="2"]{
+    position: sticky;
+    left: 0;
+    z-index: 8;
+    background:linear-gradient(180deg,#f8fafc 0%,#eef2f7 100%);
+    box-shadow:2px 0 0 #cbd5e1;
+}
+
+#roomOverviewTable tbody td.time-col{
+    position: sticky;
+    z-index: 6;
+}
+
+#roomOverviewTable tbody td.time-col:first-child{
+    left: 0;
+}
+
+#roomOverviewTable tbody td.time-col:nth-child(2){
+    left: 96px;
+}
+
+#roomOverviewTable tbody tr:hover td.time-col{
+    background:linear-gradient(180deg,#eef4ff 0%,#e2e8f0 100%);
 }
 
 /* ================= RESPONSIVE (MOBILE) ================= */

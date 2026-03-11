@@ -10,6 +10,7 @@ import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
 import zeroday.Models.dto.schedule.TertiaryBlockResponse
 import zeroday.Models.dto.schedule.TertiaryRowResponse
+import zeroday.Queries.Settings.SchoolHoursRepository
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -96,6 +97,8 @@ object SchedulerNAMEI_Repository {
             it[subjectName] = base[Schedules.subjectName]
             it[year] = base[Schedules.year]
             it[term] = base[Schedules.term]
+            it[Schedules.schoolYear] = base[Schedules.schoolYear]
+            it[Schedules.academicTerm] = base[Schedules.academicTerm]
             it[levelIndex] = base[Schedules.levelIndex]
             it[isElective] = base[Schedules.isElective]
             it[isDuplicateRow] = true
@@ -132,6 +135,11 @@ object SchedulerNAMEI_Repository {
             if (TeacherBlockRepository.hasRestDayOverlap(teacherId, dayNorm, ns, ne)) {
                 throw IllegalArgumentException("Cannot set schedule: teacher is on REST DAY for $dayNorm.")
             }
+        }
+
+        if (day != null && ns != null && ne != null) {
+            val validationError = SchoolHoursRepository.validateSlot(day, ns, ne)
+            if (validationError != null) throw IllegalArgumentException(validationError)
         }
 
         Schedules.update({ Schedules.id eq id }) {

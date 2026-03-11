@@ -6,6 +6,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 import zeroday.Controller.auth.requireRole
+import zeroday.Controller.audit.auditScheduleChange
 import zeroday.Controller.service.SchedulerSTI_Service
 import zeroday.Models.dto.schedule.TertiaryCreateBlockRequest
 import zeroday.Models.dto.schedule.UpdateScheduleRowRequest
@@ -20,12 +21,12 @@ fun Route.tertiarySchedulerRoutes() {
         route("/api/scheduler/tertiary") {
 
             get("/blocks") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "TEACHER", "CHECKER", "NON_TEACHING")) ?: return@get
+                call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL", "TEACHER", "CHECKER", "STAFF")) ?: return@get
                 call.respond(SchedulerSTI_Repository.listBlocks())
             }
 
             post("/blocks") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@post
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@post
                 try {
                     val req = call.receive<TertiaryCreateBlockRequest>()
                     val curriculumId = try {
@@ -35,6 +36,8 @@ fun Route.tertiarySchedulerRoutes() {
                         return@post
                     }
 
+                    if (!call.requireSchedulerWriteAccessForCourse(claims, req.courseCode, "TERTIARY_STI")) return@post
+
                     val section = SchedulerSTI_Service.createBlock(
                         courseCode = req.courseCode,
                         curriculumId = curriculumId,
@@ -42,6 +45,7 @@ fun Route.tertiarySchedulerRoutes() {
                         term = req.term
                     )
 
+                    call.auditScheduleChange(action = "SCHEDULE_BLOCK_CREATE", entityType = "ScheduleBlock", sectionCode = section, newValue = "Created block")
                     call.respond(HttpStatusCode.Created, mapOf("section" to section))
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to (e.message ?: "Invalid request")))
@@ -51,20 +55,22 @@ fun Route.tertiarySchedulerRoutes() {
             }
 
             delete("/blocks/{sectionCode}") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@delete
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@delete
                 val sectionCode = call.parameters["sectionCode"]
                 if (sectionCode.isNullOrBlank()) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Missing sectionCode"))
                     return@delete
                 }
+                if (!call.requireSchedulerWriteAccessBySection(claims, sectionCode)) return@delete
                 SchedulerSTI_Repository.deleteBlock(sectionCode)
+                call.auditScheduleChange(action = "SCHEDULE_BLOCK_DELETE", entityType = "ScheduleBlock", notes = "Deleted block")
                 call.respond(HttpStatusCode.NoContent)
             }
 
 
 
             post("/rows") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@post
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@post
                 val req = call.receive<DuplicateScheduleRowRequest>()
                 val baseId = try {
                     UUID.fromString(req.baseRowId)
@@ -73,6 +79,8 @@ fun Route.tertiarySchedulerRoutes() {
                     return@post
                 }
 
+                if (!call.requireSchedulerWriteAccessByRowId(claims, baseId)) return@post
+
                 val newId = try {
                     SchedulerSTI_Repository.duplicateRow(baseId)
                 } catch (e: IllegalArgumentException) {
@@ -80,11 +88,12 @@ fun Route.tertiarySchedulerRoutes() {
                     return@post
                 }
 
+                call.auditScheduleChange(action = "SCHEDULE_ROW_CREATE", entityType = "ScheduleRow", entityId = newId.toString(), notes = "Duplicated row")
                 call.respond(HttpStatusCode.Created, mapOf("id" to newId.toString()))
             }
 
             delete("/rows/{id}") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@delete
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@delete
                 val idStr = call.parameters["id"] ?: return@delete call.respond(
                     HttpStatusCode.BadRequest, mapOf("message" to "Missing id")
                 )
@@ -92,6 +101,8 @@ fun Route.tertiarySchedulerRoutes() {
                 val id = try { UUID.fromString(idStr) } catch (_: Exception) {
                     return@delete call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid id"))
                 }
+
+                if (!call.requireSchedulerWriteAccessByRowId(claims, id)) return@delete
 
                 val ok = SchedulerSTI_Repository.deleteDuplicateRow(id)
                 if (!ok) {
@@ -101,11 +112,12 @@ fun Route.tertiarySchedulerRoutes() {
                     )
                 }
 
+                call.auditScheduleChange(action = "SCHEDULE_ROW_DELETE", entityType = "ScheduleRow", entityId = id.toString(), notes = "Deleted duplicated row")
                 call.respond(HttpStatusCode.NoContent)
             }
 
             put("/rows/{id}") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@put
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@put
                 val idParam = call.parameters["id"]
                 val id = try { UUID.fromString(idParam) } catch (_: Exception) { null }
 
@@ -113,6 +125,8 @@ fun Route.tertiarySchedulerRoutes() {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid schedule row id"))
                     return@put
                 }
+
+                if (!call.requireSchedulerWriteAccessByRowId(claims, id)) return@put
 
                 val req = call.receive<UpdateScheduleRowRequest>()
 
@@ -133,6 +147,7 @@ fun Route.tertiarySchedulerRoutes() {
                         roomId = roomId,
                         teacherId = teacherId
                     )
+                    call.auditScheduleChange(action = "SCHEDULE_ROW_UPDATE", entityType = "ScheduleRow", entityId = id.toString(), notes = "Updated schedule row")
                     call.respond(HttpStatusCode.OK)
                 } catch (e: IllegalArgumentException) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to (e.message ?: "Invalid schedule time")))

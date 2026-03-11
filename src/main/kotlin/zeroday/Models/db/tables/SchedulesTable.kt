@@ -30,6 +30,8 @@ object Schedules : Table("schedules") {
 
     val year = integer("year").default(1)
     val term = integer("term").default(1)
+    val schoolYear = varchar("school_year", 30).default("")
+    val academicTerm = varchar("academic_term", 20).default("")
 
     // 1..8 (year-term index)
     val levelIndex = integer("level_index").default(1)

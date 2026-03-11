@@ -9,6 +9,7 @@ import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
 import zeroday.Models.dto.schedule.JhsBlockResponse
 import zeroday.Models.dto.schedule.JhsRowResponse
+import zeroday.Queries.Settings.SchoolHoursRepository
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -89,6 +90,9 @@ object SchedulerJHS_Repository {
     }
 
     fun createBlock(curriculumId: UUID, grade: Int, sectionName: String) = transaction {
+        val activePeriod = SchoolHoursRepository.getActivePeriod()
+            ?: throw IllegalStateException("No active school year and term configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.")
+
         val cur = Curriculums
             .select { Curriculums.id eq curriculumId }
             .singleOrNull()
@@ -136,6 +140,8 @@ object SchedulerJHS_Repository {
                 // JHS: store grade in year
                 it[Schedules.year] = grade
                 it[Schedules.term] = 1
+                it[Schedules.schoolYear] = activePeriod.schoolYear
+                it[Schedules.academicTerm] = activePeriod.term
                 it[Schedules.levelIndex] = 1
                 it[Schedules.isElective] = false
 
@@ -176,6 +182,8 @@ object SchedulerJHS_Repository {
 
             it[Schedules.year] = base[Schedules.year]
             it[Schedules.term] = base[Schedules.term]
+            it[Schedules.schoolYear] = base[Schedules.schoolYear]
+            it[Schedules.academicTerm] = base[Schedules.academicTerm]
             it[Schedules.levelIndex] = base[Schedules.levelIndex]
             it[Schedules.isElective] = base[Schedules.isElective]
 
@@ -215,6 +223,11 @@ object SchedulerJHS_Repository {
             if (TeacherBlockRepository.hasRestDayOverlap(teacherId, dayNorm, ns, ne)) {
                 throw IllegalArgumentException("Cannot set schedule: teacher is on REST DAY for $dayNorm.")
             }
+        }
+
+        if (day != null && ns != null && ne != null) {
+            val validationError = SchoolHoursRepository.validateSlot(day, ns, ne)
+            if (validationError != null) throw IllegalArgumentException(validationError)
         }
 
         Schedules.update({ Schedules.id eq id }) {

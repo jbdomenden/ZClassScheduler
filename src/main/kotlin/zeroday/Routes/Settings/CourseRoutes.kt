@@ -25,7 +25,7 @@ fun Application.courseRoutes() {
                 }
 
                 post {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@post
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@post
                     val req = call.receive<CourseRequest>()
                     val id = CourseRepository.create(req)
                     call.auditPrivilegedCrud("COURSE_CREATE", "Course", id, success = true, message = "Created course '${req.code}' (${req.name}).")
@@ -33,7 +33,7 @@ fun Application.courseRoutes() {
                 }
 
                 put("/{id}") {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@put
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@put
                     val id = UUID.fromString(call.parameters["id"])
                     val req = call.receive<CourseRequest>()
                     CourseRepository.update(id, req)
@@ -42,7 +42,7 @@ fun Application.courseRoutes() {
                 }
 
                 delete("/{id}") {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@delete
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@delete
                     val id = UUID.fromString(call.parameters["id"])
                     CourseRepository.deactivate(id)
                     call.auditPrivilegedCrud("COURSE_DEACTIVATE", "Course", id, success = true, message = null)
@@ -63,7 +63,7 @@ fun Application.courseManagementRoutes() {
                 }
 
                 post {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@post
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@post
                     try {
                         val req = call.receive<CourseRequest>()
                         val id = CourseRepository.create(req)
@@ -77,7 +77,7 @@ fun Application.courseManagementRoutes() {
                 }
 
                 put("/{id}") {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@put
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@put
                     val id = UUID.fromString(call.parameters["id"])
                     try {
                         val req = call.receive<CourseRequest>()
@@ -93,7 +93,7 @@ fun Application.courseManagementRoutes() {
 
                 // Toggle status without changing other fields
                 put("/{id}/status") {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@put
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@put
                     val id = UUID.fromString(call.parameters["id"])
                     val body = call.receive<Map<String, Boolean>>()
                     val active = body["active"] ?: true
@@ -104,7 +104,7 @@ fun Application.courseManagementRoutes() {
 
                 // Delete maps to deactivate
                 delete("/{id}") {
-                    call.requireRole(setOf("SUPER_ADMIN")) ?: return@delete
+                    call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@delete
                     val id = UUID.fromString(call.parameters["id"])
                     CourseRepository.deactivate(id)
                     call.auditPrivilegedCrud("COURSE_DEACTIVATE", "Course", id, success = true, message = null)
