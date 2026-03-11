@@ -9,6 +9,7 @@
   rooms: "/api/settings/rooms",
   teachers: "/api/settings/teachers",
   settingsCurriculums: "/api/settings/curriculums",
+  academicPeriod: "/api/settings/academic-period/current",
 };
 
 const token = localStorage.getItem("token");
@@ -51,6 +52,7 @@ let rooms = [];
 let teachers = [];
 let sortKey = "grade";
 let sortDir = "asc";
+let activeAcademicPeriod = null;
 
 // Time policy for the schedule grid (must match backend ScheduleTimePolicy)
 const TIME_POLICY = {
@@ -80,6 +82,51 @@ async function fetchJson(url, options) {
 
   if (!txt) return null;
   return ct.includes("application/json") ? JSON.parse(txt) : txt;
+}
+
+
+function getWizardSubmitBtn() {
+  return wizardForm?.querySelector('button[type="submit"]') || null;
+}
+
+function renderAcademicPeriodHint() {
+  if (!wizardForm) return;
+  let hint = wizardForm.querySelector('[data-academic-period-hint]');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.setAttribute('data-academic-period-hint', '1');
+    hint.style.margin = '0 0 12px';
+    hint.style.padding = '8px 10px';
+    hint.style.borderRadius = '8px';
+    hint.style.fontSize = '12px';
+    wizardForm.prepend(hint);
+  }
+  const submit = getWizardSubmitBtn();
+  if (!activeAcademicPeriod) {
+    hint.style.background = '#fff1f2';
+    hint.style.border = '1px solid #fecaca';
+    hint.textContent = 'No active school year/term is configured. Schedule block creation is disabled.';
+    if (submit) submit.disabled = true;
+    return;
+  }
+
+  hint.style.background = '#eff6ff';
+  hint.style.border = '1px solid #bfdbfe';
+  hint.textContent = `Academic Period (locked by settings): ${activeAcademicPeriod.schoolYear} | Term ${activeAcademicPeriod.term}`;
+  if (submit) submit.disabled = false;
+}
+
+async function loadActiveAcademicPeriod() {
+  try {
+    const res = await fetchJson(API.academicPeriod);
+    activeAcademicPeriod = (res && res.success !== false && res.schoolYear && res.term)
+      ? { schoolYear: String(res.schoolYear), term: String(res.term) }
+      : null;
+  } catch (_err) {
+    activeAcademicPeriod = null;
+  }
+  renderAcademicPeriodHint();
+  return activeAcademicPeriod;
 }
 
 function escapeHtml(s) {
@@ -565,9 +612,10 @@ function populateCurriculums(programCode) {
     list.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
 }
 
-function openWizard() {
+async function openWizard() {
   if (!wizardModal) return;
   wizardModal.classList.remove("hidden");
+  await loadActiveAcademicPeriod();
 }
 
 function closeWizard() {
@@ -897,6 +945,12 @@ wizardForm?.addEventListener("submit", async (e) => {
   const curriculumId = (curriculumSelect.value || "").trim();
   const grade = parseInt(gradeSelect.value, 10);
   const sectionName = (sectionNameInput.value || "").trim();
+
+  if (!activeAcademicPeriod) await loadActiveAcademicPeriod();
+  if (!activeAcademicPeriod) {
+    appAlert("No active school year/term is configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.");
+    return;
+  }
 
   if (!curriculumId || !Number.isFinite(grade) || !sectionName) {
     appAlert("Please complete Program, Curriculum, Grade, and Section Name.");

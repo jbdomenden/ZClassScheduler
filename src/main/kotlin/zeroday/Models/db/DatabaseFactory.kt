@@ -38,6 +38,9 @@ object DatabaseFactory {
                 AuditLogs,
                 CheckerLogs,
                 ScheduleLogs,
+                SchoolHoursSettings,
+                SchoolDayRules,
+                AcademicBreaks,
                 Teachers
             )
         }
