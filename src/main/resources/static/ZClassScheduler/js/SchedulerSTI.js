@@ -168,6 +168,12 @@ function isStaffDepartment(deptRaw) {
     return parts.includes("STAFF");
 }
 
+function isLaboratoryRoom(roomObj) {
+    const typ = String(roomObj?.type || roomObj?.roomType || roomObj?.category || "").toUpperCase();
+    const code = String(roomObj?.code || roomObj?.name || "").toUpperCase();
+    return typ.includes("LAB") || code.includes("LAB");
+}
+
 function overlaps(sm, em, sm2, em2) {
     return sm < em2 && sm2 < em;
 }
@@ -290,6 +296,14 @@ async function suggestForEditModal() {
         duration = TIME_POLICY.allowedDurations
             .slice()
             .sort((a, b) => Math.abs(a - duration) - Math.abs(b - duration))[0];
+    }
+
+
+    const selectedRoomId = String((typeof editRoom !== "undefined" ? editRoom?.value : roomSelect?.value) || "").trim();
+    const selectedRoomObj = (rooms || []).find((r) => String(r?.id || "") === selectedRoomId);
+    const noExplicitDuration = !(smPref != null && emPref != null && emPref > smPref);
+    if (selectedRoomObj && isLaboratoryRoom(selectedRoomObj) && noExplicitDuration) {
+        duration = 180;
     }
 
     const localRows = flattenScheduledRows();
