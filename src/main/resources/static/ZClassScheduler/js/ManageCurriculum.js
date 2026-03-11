@@ -477,7 +477,7 @@ function renderCurriculumList() {
    TABLE ACTIONS
 ============================ */
 
-tableBody.addEventListener("click", async (e) => {
+if (tableBody) tableBody.addEventListener("click", async (e) => {
     const action = e.target.dataset.action;
     if (!action) return;
 
@@ -852,11 +852,22 @@ async function toggleCurriculum(id) {
 ============================ */
 
 function openUploadModal() {
-    if (uploadForm) uploadForm.reset();
-    resetUploadDetectedFields();
-    setUploadInputsEnabled(false);
-    if (uploadModal) uploadModal.classList.remove("hidden");
-    if (deptSelect) deptSelect.focus();
+    if (!uploadModal) {
+        console.warn("[curriculum] upload modal is missing from DOM");
+        return;
+    }
+
+    // Show modal first so any non-critical init issue doesn't block visibility.
+    uploadModal.classList.remove("hidden");
+
+    try {
+        if (uploadForm) uploadForm.reset();
+        resetUploadDetectedFields();
+        setUploadInputsEnabled(false);
+        if (deptSelect) deptSelect.focus();
+    } catch (err) {
+        console.error("[curriculum] upload modal init failed", err);
+    }
 }
 
 if (uploadBtn) uploadBtn.addEventListener("click", openUploadModal);
@@ -868,7 +879,7 @@ document.addEventListener("click", (e) => {
 });
 
 if (closeUploadModalBtn) closeUploadModalBtn.addEventListener("click", () => {
-    uploadModal.classList.add("hidden");
+    if (uploadModal) uploadModal.classList.add("hidden");
 });
 
 /* ============================
@@ -1054,7 +1065,7 @@ if (deptSelect) {
  * - auto-fill program preview
  * - auto-detect curriculum code and fill if input is empty
  */
-pdfInput.addEventListener("change", async () => {
+if (pdfInput) pdfInput.addEventListener("change", async () => {
     try {
         const dept = String(deptSelect?.value || "").trim();
         if (!dept) {
@@ -1162,7 +1173,7 @@ if (uploadForm) uploadForm.addEventListener("submit", async (e) => {
    DELETE MODE
 ============================ */
 
-deleteModeBtn.addEventListener("click", () => {
+if (deleteModeBtn) deleteModeBtn.addEventListener("click", () => {
     deleteMode = !deleteMode;
     deleteModeBtn.textContent = deleteMode ? "Done" : "Delete Curriculum";
 
