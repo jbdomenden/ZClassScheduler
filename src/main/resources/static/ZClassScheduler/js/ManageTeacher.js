@@ -70,6 +70,11 @@ function isVisibleInUserManagementTable(teacher) {
     return normalizeRole(teacher?.role) !== "SUPER_ADMIN";
 }
 
+
+function isVisibleInUserManagementTable(teacher) {
+    return normalizeRole(teacher?.email) !== "admin@zcs.edu";
+}
+
 function canManageUser(targetTeacher) {
     if (!targetTeacher) return false;
     if (CURRENT_USER.role === "SUPER_ADMIN") return true;
