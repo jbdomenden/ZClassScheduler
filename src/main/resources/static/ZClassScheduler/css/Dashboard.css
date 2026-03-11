@@ -123,6 +123,28 @@ th{font-size:12px;text-transform:uppercase;color:var(--text-muted);background:#f
     vertical-align: middle;
 }
 
+/* Keep time columns visible while horizontally scrolling wide room overview grids. */
+#roomOverviewTable thead th[colspan="2"]{
+    position: sticky;
+    left: 0;
+    z-index: 8;
+    background: #f8fafc;
+}
+
+#roomOverviewTable tbody td.time-col{
+    position: sticky;
+    z-index: 4;
+    background: #f8fafc;
+}
+
+#roomOverviewTable tbody td.time-col:first-child{
+    left: 0;
+}
+
+#roomOverviewTable tbody td.time-col:nth-child(2){
+    left: 90px;
+}
+
 /* ================= RESPONSIVE (MOBILE) ================= */
 @media (max-width:900px){
     .content-grid{grid-template-columns:1fr;gap:14px;}
