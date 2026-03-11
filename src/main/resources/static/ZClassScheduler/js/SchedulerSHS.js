@@ -628,7 +628,7 @@ function isStaffDepartment(deptRaw) {
         .split(/[;,|]/g)
         .map((x) => String(x || "").trim().toUpperCase())
         .filter(Boolean);
-    return parts.includes("STAFF");
+    return parts.includes("STAFF") || parts.includes("NON_TEACHING");
 }
 
 function isLaboratoryRoom(roomObj) {
@@ -920,7 +920,7 @@ async function loadLookups() {
       .toUpperCase()
       .replace(/\s+/g, "_")
       .replace(/-/g, "_");
-    const disallowed = new Set(["CHECKER", "NON_TEACHING"]);
+    const disallowed = new Set(["CHECKER", "NON_TEACHING", "STAFF"]);
 
     teachers = raw
       .filter(t => !disallowed.has(normRole(t?.role)) && !isStaffDepartment(t?.department))

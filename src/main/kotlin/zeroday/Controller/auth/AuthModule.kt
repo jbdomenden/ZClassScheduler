@@ -9,6 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import zeroday.Controller.security.PasswordCrypto
+import zeroday.Controller.auth.RoleCatalog
 import zeroday.Queries.Login.UserRepositoryImpl
 import zeroday.Queries.Settings.TeacherRepository
 
@@ -96,15 +97,6 @@ fun Route.authRoutes() {
                         email = user.email
                     )
 
-                    fun normalizeRole(roleRaw: String?): String {
-                        val r0 = (roleRaw ?: "").trim().uppercase().replace("\\s+".toRegex(), "_").replace("-", "_")
-                        return when (r0) {
-                            "SUPERADMIN" -> "SUPER_ADMIN"
-                            "" -> "TEACHER"
-                            else -> r0
-                        }
-                    }
-
                     fun defaultPassword(firstName: String, lastName: String): String {
                         val fi = firstName.trim().firstOrNull()?.lowercaseChar()?.toString() ?: ""
                         val ln = lastName.trim().lowercase().replace("\\s+".toRegex(), "")
@@ -112,15 +104,15 @@ fun Route.authRoutes() {
                         return if (p.isNotEmpty()) p else "password"
                     }
 
-                    val roleNorm = normalizeRole(user.role)
+                    val roleNorm = RoleCatalog.normalize(user.role)
                     val forcePasswordChange = when (roleNorm) {
                         // Bootstrap super admin should be able to open directly to dashboard.
-                        "SUPER_ADMIN" -> {
+                        RoleCatalog.SUPER_ADMIN, RoleCatalog.ACADEMIC_HEAD -> {
                             val isBootstrap = email == "admin@zcs.edu"
                             if (isBootstrap) false
                             else PasswordCrypto.verify("admin123", user.passwordSalt, user.passwordHash)
                         }
-                        "ADMIN", "CHECKER" -> {
+                        RoleCatalog.ADMIN, RoleCatalog.PROGRAM_HEAD, RoleCatalog.SCHEDULER, RoleCatalog.ASSISTANT_PRINCIPAL, RoleCatalog.CHECKER -> {
                             val t = TeacherRepository.findIdentityByEmail(email)
                             if (t == null) false
                             else PasswordCrypto.verify(
@@ -156,7 +148,7 @@ fun Route.authRoutes() {
                     val p = call.principal<JWTPrincipal>()
                     val userId = p?.payload?.getClaim("userId")?.asString()
                         ?: p?.payload?.subject
-                    val role = p?.payload?.getClaim("role")?.asString()
+                    val role = RoleCatalog.normalize(p?.payload?.getClaim("role")?.asString())
                     val email = p?.payload?.getClaim("email")?.asString()
 
                     if (userId.isNullOrBlank() || role.isNullOrBlank()) {
