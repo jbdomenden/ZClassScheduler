@@ -13,6 +13,10 @@ plugins {
 group = "zeroday"
 version = "0.0.1"
 
+repositories {
+    mavenCentral()
+}
+
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
 }
