@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule Logs</title>
+  <link rel="stylesheet" href="/ZClassScheduler/css/base.css" />
+</head>
+<body>
+<header id="global-header" class="topbar"></header>
+<div class="container">
+  <aside id="global-nav" class="sidebar"></aside>
+  <main>
+    <div class="page-header"><h2>Schedule Logs</h2><p class="subtitle">Track schedule create/update/delete activities.</p></div>
+    <div class="panel" style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <input id="q" type="text" placeholder="Search logs" style="padding:10px;min-width:260px;" />
+      <button id="refreshBtn" class="btn btn-secondary">Refresh</button>
+      <button id="loadMoreBtn" class="btn btn-secondary" style="display:none;">Load more</button>
+    </div>
+    <div class="panel table-wrapper">
+      <table>
+        <thead><tr><th>Time</th><th>Role</th><th>Actor</th><th>Action</th><th>Entity</th><th>Section</th><th>Details</th></tr></thead>
+        <tbody id="scheduleLogsTbody"><tr><td colspan="7" class="muted">Loading...</td></tr></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<script src="/ZClassScheduler/js/ScheduleLogs.js"></script>
+<script src="/ZClassScheduler/js/load-global.js"></script>
+<script src="/ZClassScheduler/js/GlobalSidebar.js"></script>
+</body>
+</html>
