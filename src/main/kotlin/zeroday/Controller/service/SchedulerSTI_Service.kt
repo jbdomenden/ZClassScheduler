@@ -9,6 +9,7 @@ import zeroday.Models.db.tables.Curriculums
 import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
 import java.util.UUID
+import zeroday.Queries.Settings.SchoolHoursRepository
 
 /**
  * STI Tertiary schedule block creation.
@@ -30,6 +31,9 @@ object SchedulerSTI_Service {
 
     fun createBlock(courseCode: String, curriculumId: UUID, year: Int, term: Int): String = transaction {
         validateInputs(courseCode, year, term)
+
+        val activePeriod = SchoolHoursRepository.getActivePeriod()
+            ?: throw IllegalStateException("No active school year and term configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.")
 
         val normalizedCourse = courseCode.trim().uppercase()
         val level = levelIndex(year, term)
@@ -97,6 +101,8 @@ object SchedulerSTI_Service {
 
                 it[Schedules.year] = year
                 it[Schedules.term] = term
+                it[Schedules.schoolYear] = activePeriod.schoolYear
+                it[Schedules.academicTerm] = activePeriod.term
                 it[Schedules.levelIndex] = level
 
                 it[Schedules.isElective] = false

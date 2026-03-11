@@ -8,8 +8,8 @@
     <!-- Page-specific styles (dashboard) -->
     <link rel="stylesheet" href="../css/Dashboard.css" />
     <!-- Shared/base styles used across pages -->
-    <link rel="stylesheet" href="/ZclassScheduler/css/base.css" />
-    <link rel="stylesheet" href="/ZclassScheduler/css/ScheduleGrid.css" />
+    <link rel="stylesheet" href="/ZClassScheduler/css/base.css" />
+    <link rel="stylesheet" href="/ZClassScheduler/css/ScheduleGrid.css" />
     <link rel="icon" type="image/x-icon" href="/ZClassScheduler/Assets/zclassscheduler.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/ZClassScheduler/Assets/zclassscheduler-32.png" />
     <link rel="icon" type="image/png" sizes="64x64" href="/ZClassScheduler/Assets/zclassscheduler-64.png" />
@@ -69,6 +69,7 @@
                         <div class="view-toggle" style="margin:0;">
                             <button id="utilModeDay" class="btn btn-secondary" type="button">Per Day</button>
                             <button id="utilModeWeek" class="btn btn-secondary" type="button">Per Week</button>
+                            <span id="utilWeekOverall" class="muted" style="margin-left:6px;white-space:nowrap;">Overall: --%</span>
                         </div>
 
                         <select id="utilDaySelect" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;">
@@ -140,12 +141,12 @@
 </div>
 
 <!-- Page logic for dashboard (e.g., roomGrid population) -->
-<script type="module" src="/ZclassScheduler/js/Dashboard.js"></script>
+<script type="module" src="/ZClassScheduler/js/Dashboard.js"></script>
 
 <!-- Loads shared header/sidebar content into #global-header and #global-nav -->
-<script src="/ZclassScheduler/js/load-global.js"></script>
+<script src="/ZClassScheduler/js/load-global.js"></script>
 
 <!-- Navigation interactions (e.g., sidebar toggle, logout) -->
-<script src="/ZclassScheduler/js/GlobalSidebar.js"></script>
+<script src="/ZClassScheduler/js/GlobalSidebar.js"></script>
 </body>
 </html>
