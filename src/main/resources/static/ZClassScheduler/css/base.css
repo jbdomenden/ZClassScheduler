@@ -737,3 +737,11 @@ body.sidebar-open{overflow:hidden;}
         bottom:12px;
     }
 }
+
+/* Mobile table readability improvements */
+@media (max-width: 700px){
+  .table-wrapper{overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px;}
+  .table-wrapper table{min-width:720px; font-size:12px;}
+  table th, table td{padding:8px 10px; white-space:nowrap;}
+  .btn{min-height:34px;}
+}

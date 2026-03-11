@@ -135,6 +135,32 @@ function clearAuthState() {
     sessionStorage.clear();
 }
 
+
+function normalizeRole(roleRaw) {
+    const r = String(roleRaw || "").trim().toLowerCase();
+    if (r === "superadmin" || r === "super_admin") return "SUPER_ADMIN";
+    if (r === "academic_head" || r === "academic head") return "ACADEMIC_HEAD";
+    if (r === "program_head" || r === "program head") return "PROGRAM_HEAD";
+    if (r === "assistant_principal" || r === "assistant principal") return "ASSISTANT_PRINCIPAL";
+    if (r === "non_teaching" || r === "nonteaching" || r === "staff") return "STAFF";
+    return String(roleRaw || "").trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
+function roleGuide(role) {
+    const guides = {
+        SUPER_ADMIN: "Full system access: manage users, rooms, courses, curriculum, all schedulers, reports, and audit data.",
+        ACADEMIC_HEAD: "Academic leadership access (same scope as SUPER_ADMIN for academic operations): manage curriculum, rooms, courses, users, and monitor schedules/health.",
+        ADMIN: "Department admin access: manage users in allowed scope, create sections, and manage schedules based on department permissions.",
+        PROGRAM_HEAD: "Program leadership access (admin-like): manage teacher/admin-time users and scheduling inside authorized department scope.",
+        SCHEDULER: "Scheduling access (admin-like): create/edit schedules and sections inside authorized department scope.",
+        ASSISTANT_PRINCIPAL: "Admin-like access; can manage HS scheduling (JHS/SHS), plus department-authorized scheduling tasks.",
+        TEACHER: "View-only teacher access: check your own teaching schedule.",
+        CHECKER: "Room checking access: review room schedules and submit attendance checks.",
+        STAFF: "Non-teaching staff account: limited non-scheduling access based on assigned permissions.",
+    };
+    return guides[role] || "Role-specific access is enabled based on your assigned permissions.";
+}
+
 async function redirectAfterLogin(token) {
     // Decide landing page based on JWT role.
     try {
@@ -146,10 +172,22 @@ async function redirectAfterLogin(token) {
         });
         if (meRes.ok) {
             const me = await meRes.json().catch(() => null);
-            const role = String(me?.role || "").trim().toUpperCase().replace(/\s+/g, "_");
+            const role = normalizeRole(me?.role);
             if (role) localStorage.setItem("role", role);
 
-            if (role === "TEACHER" || role === "CHECKER" || role === "NON_TEACHING") {
+            await appAlert(`Role: ${role || "UNKNOWN"}
+
+${roleGuide(role)}`, { title: "Your Access Profile" });
+
+            if (role === "TEACHER") {
+                window.location.href = "/ZClassScheduler/html/SchedulesTeacher.html";
+                return;
+            }
+            if (role === "CHECKER") {
+                window.location.href = "/ZClassScheduler/html/SchedulesRoom.html";
+                return;
+            }
+            if (role === "STAFF") {
                 window.location.href = "/ZClassScheduler/html/SchedulesOverview.html";
                 return;
             }
@@ -292,6 +330,12 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
         rememberMe: !!rememberEl?.checked,
     };
 
+    function showLoginError(message) {
+        // Ensure the loading overlay is removed before opening modal alerts.
+        setLoginLoading(false);
+        appAlert(message);
+    }
+
     try {
         const res = await fetch("/api/auth/login", {
             method: "POST",
@@ -303,7 +347,7 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
             const data = await res.json().catch(() => null);
             const token = data?.token;
             if (!token) {
-                appAlert("Login succeeded, but no token was returned. Please contact the administrator.");
+                showLoginError("Login succeeded, but no token was returned. Please contact the administrator.");
                 return;
             }
 
@@ -334,11 +378,11 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
             // NOTE: Response may not be JSON; ignore parse errors and keep default message.
         }
 
-        appAlert(msg);
+        showLoginError(msg);
     } catch (err) {
         // Network / unexpected failure path (fetch throws).
         console.error("Login failed:", err);
-        appAlert("Unable to login right now. Please check your connection and try again.");
+        showLoginError("Unable to login right now. Please check your connection and try again.");
     } finally {
         // IMPORTANT: Always clear loading state, even after errors or early returns.
         setLoginLoading(false);

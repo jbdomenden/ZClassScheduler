@@ -45,6 +45,7 @@ fun Application.configureRouting() {
         courseManagementRoutes()
         auditLogsRoutes()
         checkerLogsRoutes()
+        scheduleLogsRoutes()
         teacherBlockViewRoutes()
         tertiarySchedulerRoutes()
         nameiSchedulerRoutes()
