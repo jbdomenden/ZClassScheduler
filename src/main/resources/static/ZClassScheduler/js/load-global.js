@@ -166,7 +166,14 @@
                     tracked = true;
                     beginBusy();
                 }
-                return await _fetch(...args);
+                try {
+                    return await _fetch(...args);
+                } catch (err) {
+                    if (shouldTrack) {
+                        console.warn("[load-global] fetch failed:", u || "(unknown)", err);
+                    }
+                    throw err;
+                }
             } finally {
                 // If we showed the splash for this request, close it when done.
                 if (tracked) endBusy();
@@ -415,7 +422,7 @@
             // Modal walkthrough (what to input + sample demo)
             { title: "First name", text: "Enter the user's first name.", selector: "#empFn", ensure: [{ type: "click", selector: "#addTeacherBtn", real: true, ms: 250 }], demo: { actions: [{ type: "type", selector: "#empFn", value: "Juan", ms: 700 }] } },
             { title: "Last name", text: "Enter the user's last name.", selector: "#empLn", demo: { actions: [{ type: "type", selector: "#empLn", value: "Dela Cruz", ms: 700 }] } },
-            { title: "Department", text: "Pick the department. Use STAFF for staff users.", selector: "#type", demo: { actions: [{ type: "select", selector: "#type", value: "ICT", ms: 700 }] } },
+            { title: "Department", text: "Pick the department. Use NON_TEACHING department for staff users.", selector: "#type", demo: { actions: [{ type: "select", selector: "#type", value: "ICT", ms: 700 }] } },
             { title: "Email", text: "Enter the login email address.", selector: "#email", demo: { actions: [{ type: "type", selector: "#email", value: "juan.delacruz@school.edu", ms: 700 }] } },
             { title: "Role", text: "Choose the role. Admin permissions may limit which roles you can assign.", selector: "#role", demo: { actions: [{ type: "select", selector: "#role", value: "TEACHER", ms: 700 }] } },
             { title: "Default password", text: "Password is generated automatically.\nTo reset later, open Edit and click Reset Password.", selector: "#teacherModal .hint" },
@@ -1340,8 +1347,12 @@
         const r = String(roleRaw || "").trim().toLowerCase();
         if (r === "super_admin" || r === "superadmin" || r === "super admin") return "SUPER_ADMIN";
         if (r === "admin") return "ADMIN";
+        if (r === "academic_head" || r === "academic head") return "ACADEMIC_HEAD";
+        if (r === "program_head" || r === "program head") return "PROGRAM_HEAD";
+        if (r === "scheduler") return "SCHEDULER";
+        if (r === "assistant_principal" || r === "assistant principal") return "ASSISTANT_PRINCIPAL";
         if (r === "checker") return "CHECKER";
-        if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching") return "NON_TEACHING";
+        if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching" || r === "staff") return "STAFF";
         return "TEACHER";
     }
 
@@ -1418,21 +1429,21 @@
     // =========================
     const PAGE_RULES = [
         // Teachers can only view the schedule pages.
-        { file: "Dashboard.html", allow: ["ADMIN", "SUPER_ADMIN"] },
+        { file: "Dashboard.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
 
         // Scheduler pages (building schedules) are ADMIN/SUPER_ADMIN only.
-        { file: "SchedulerSTI.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "SchedulerNAMEI.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "SchedulerJHS.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "SchedulerSHS.html", allow: ["ADMIN", "SUPER_ADMIN"] },
+        { file: "SchedulerSTI.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "SchedulerNAMEI.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "SchedulerJHS.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "SchedulerSHS.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
 
         // Settings pages
-        { file: "ManageTeacher.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "ManageRoom.html", allow: ["SUPER_ADMIN"] },
-        { file: "ManageCurriculum.html", allow: ["SUPER_ADMIN"] },
-        { file: "ManageCourse.html", allow: ["SUPER_ADMIN"] },
-        { file: "AuditLogs.html", allow: ["SUPER_ADMIN"] },
-        { file: "CheckerLogs.html", allow: ["CHECKER", "ADMIN", "SUPER_ADMIN"] },
+        { file: "ManageTeacher.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "ManageRoom.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "ManageCurriculum.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "ManageCourse.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "AuditLogs.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "CheckerLogs.html", allow: ["CHECKER", "ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
     ];
 
     function currentFileName() {
@@ -1441,7 +1452,15 @@
     }
 
     function redirectUnauthorized(role) {
-        if (role === "TEACHER" || role === "CHECKER" || role === "NON_TEACHING") {
+        if (role === "TEACHER") {
+            window.location.href = "/ZClassScheduler/html/SchedulesTeacher.html";
+            return;
+        }
+        if (role === "CHECKER") {
+            window.location.href = "/ZClassScheduler/html/SchedulesRoom.html";
+            return;
+        }
+        if (role === "STAFF") {
             window.location.href = "/ZClassScheduler/html/SchedulesOverview.html";
             return;
         }

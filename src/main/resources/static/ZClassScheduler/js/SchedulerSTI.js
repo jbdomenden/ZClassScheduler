@@ -160,6 +160,20 @@ function nearestHHMM(targetHHMM, candidates) {
     return best;
 }
 
+function isStaffDepartment(deptRaw) {
+    const parts = String(deptRaw || "")
+        .split(/[;,|]/g)
+        .map((x) => String(x || "").trim().toUpperCase())
+        .filter(Boolean);
+    return parts.includes("STAFF") || parts.includes("NON_TEACHING");
+}
+
+function isLaboratoryRoom(roomObj) {
+    const typ = String(roomObj?.type || roomObj?.roomType || roomObj?.category || "").toUpperCase();
+    const code = String(roomObj?.code || roomObj?.name || "").toUpperCase();
+    return typ.includes("LAB") || code.includes("LAB");
+}
+
 function overlaps(sm, em, sm2, em2) {
     return sm < em2 && sm2 < em;
 }
@@ -213,7 +227,10 @@ async function fetchAllSchedulerRowsForSuggestion() {
     const results = await Promise.all(endpoints.map(async (url) => {
         try {
             const res = await fetch(url, { headers: { "Accept": "application/json", ...authHeaders() } });
-            if (!res.ok) return [];
+            if (!res.ok) {
+                console.warn("[suggest] unable to load rows from", url, "status", res.status);
+                return [];
+            }
             const data = await res.json();
             if (!Array.isArray(data)) return [];
 
@@ -240,7 +257,8 @@ async function fetchAllSchedulerRowsForSuggestion() {
                 });
             });
             return out;
-        } catch (_) {
+        } catch (err) {
+            console.warn("[suggest] fetch failed for", url, err);
             return [];
         }
     }));
@@ -278,6 +296,14 @@ async function suggestForEditModal() {
         duration = TIME_POLICY.allowedDurations
             .slice()
             .sort((a, b) => Math.abs(a - duration) - Math.abs(b - duration))[0];
+    }
+
+
+    const selectedRoomId = String((typeof editRoom !== "undefined" ? editRoom?.value : roomSelect?.value) || "").trim();
+    const selectedRoomObj = (rooms || []).find((r) => String(r?.id || "") === selectedRoomId);
+    const noExplicitDuration = !(smPref != null && emPref != null && emPref > smPref);
+    if (selectedRoomObj && isLaboratoryRoom(selectedRoomObj) && noExplicitDuration) {
+        duration = 180;
     }
 
     const localRows = flattenScheduledRows();
@@ -323,6 +349,8 @@ async function suggestForEditModal() {
     }
 
     // Find first slot that fits both instructor + section schedules, then pick a free room.
+    const roomBlockedHints = [];
+
     for (const day of dayCandidates) {
         const teacherBusy = allRows.filter((r) => r.day === day && r.teacherId === selectedTeacherId);
         const sectionBusy = allRows.filter((r) => r.day === day && r.sectionKey === sectionKey);
@@ -343,7 +371,10 @@ async function suggestForEditModal() {
                 return !allRows.some((x) => x.day === day && x.roomId === rid && overlaps(sm, em, x.sm, x.em));
             });
 
-            if (!freeRoom) continue;
+            if (!freeRoom) {
+            if (roomBlockedHints.length < 3) roomBlockedHints.push(`${day} ${start}-${minutesToHHMM(em)}`);
+            continue;
+        }
 
             const endHHMM = minutesToHHMM(em);
 
@@ -361,7 +392,8 @@ async function suggestForEditModal() {
         }
     }
 
-    editSuggestBox.textContent = "No available Day/Time/Room found that fits both the Instructor and the Section.";
+    editSuggestBox.textContent = "No available Day/Time/Room found that fits both the Instructor and the Section." +
+        (roomBlockedHints.length ? `\nClosest time options blocked by room conflicts: ${roomBlockedHints.join(", ")}` : "");
 }
 
 function updateEditEndTimes(preferredEnd = null) {
@@ -590,10 +622,10 @@ async function loadRoomsTeachers() {
         .toUpperCase()
         .replace(/\s+/g, "_")
         .replace(/-/g, "_");
-    const disallowed = new Set(["CHECKER", "NON_TEACHING"]);
+    const disallowed = new Set(["CHECKER", "NON_TEACHING", "STAFF"]);
 
     teachers = (t || [])
-        .filter(x => !disallowed.has(normRole(x?.role)))
+        .filter(x => !disallowed.has(normRole(x?.role)) && !isStaffDepartment(x?.department))
         .map(x => ({
         id: x.id,
         firstName: x.firstName,

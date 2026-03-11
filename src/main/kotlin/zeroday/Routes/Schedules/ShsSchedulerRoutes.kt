@@ -21,12 +21,12 @@ fun Route.shsSchedulerRoutes() {
         route("/api/scheduler/shs") {
 
             get("/blocks") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "TEACHER", "CHECKER", "NON_TEACHING")) ?: return@get
+                call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL", "TEACHER", "CHECKER", "STAFF")) ?: return@get
                 call.respond(SchedulerSHS_Repository.listBlocks())
             }
 
             post("/blocks") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@post
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@post
                 try {
                     val req = call.receive<ShsCreateBlockRequest>()
                     val curriculumId = try {
@@ -35,6 +35,8 @@ fun Route.shsSchedulerRoutes() {
                         call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid curriculumId"))
                         return@post
                     }
+
+                    if (!call.requireSchedulerWriteAccessForCurriculumId(claims, curriculumId)) return@post
 
                     val section = SchedulerSHS_Service.createBlock(
                         courseCode = req.courseCode,
@@ -52,18 +54,19 @@ fun Route.shsSchedulerRoutes() {
             }
 
             delete("/blocks/{sectionCode}") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@delete
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@delete
                 val sectionCode = call.parameters["sectionCode"]
                 if (sectionCode.isNullOrBlank()) {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Missing sectionCode"))
                     return@delete
                 }
+                if (!call.requireSchedulerWriteAccessBySection(claims, sectionCode)) return@delete
                 SchedulerSHS_Repository.deleteBlock(sectionCode)
                 call.respond(HttpStatusCode.NoContent)
             }
 
             post("/rows") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@post
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@post
                 val req = call.receive<DuplicateScheduleRowRequest>()
                 val baseId = try {
                     UUID.fromString(req.baseRowId)
@@ -71,6 +74,8 @@ fun Route.shsSchedulerRoutes() {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid baseRowId"))
                     return@post
                 }
+
+                if (!call.requireSchedulerWriteAccessByRowId(claims, baseId)) return@post
 
                 val newId = try {
                     SchedulerSHS_Repository.duplicateRow(baseId)
@@ -83,7 +88,7 @@ fun Route.shsSchedulerRoutes() {
             }
 
             delete("/rows/{id}") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@delete
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@delete
                 val idStr = call.parameters["id"] ?: return@delete call.respond(
                     HttpStatusCode.BadRequest, mapOf("message" to "Missing id")
                 )
@@ -91,6 +96,8 @@ fun Route.shsSchedulerRoutes() {
                 val id = try { UUID.fromString(idStr) } catch (_: Exception) {
                     return@delete call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid id"))
                 }
+
+                if (!call.requireSchedulerWriteAccessByRowId(claims, id)) return@delete
 
                 val ok = SchedulerSHS_Repository.deleteDuplicateRow(id)
                 if (!ok) {
@@ -104,7 +111,7 @@ fun Route.shsSchedulerRoutes() {
             }
 
             put("/rows/{id}") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN")) ?: return@put
+                val claims = call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL")) ?: return@put
                 val idParam = call.parameters["id"]
                 val id = try { UUID.fromString(idParam) } catch (_: Exception) { null }
 
@@ -112,6 +119,8 @@ fun Route.shsSchedulerRoutes() {
                     call.respond(HttpStatusCode.BadRequest, mapOf("message" to "Invalid schedule row id"))
                     return@put
                 }
+
+                if (!call.requireSchedulerWriteAccessByRowId(claims, id)) return@put
 
                 val req = call.receive<UpdateScheduleRowRequest>()
 
