@@ -157,12 +157,12 @@ async function loadRoomOverview() {
       const tr = document.createElement("tr");
 
       const tdStart = document.createElement("td");
-      tdStart.className = "time-col";
+      tdStart.className = "time-col time-col-start";
       tdStart.textContent = fmt(t);
       tr.appendChild(tdStart);
 
       const tdEnd = document.createElement("td");
-      tdEnd.className = "time-col";
+      tdEnd.className = "time-col time-col-end";
       tdEnd.textContent = fmt(t + 30);
       tr.appendChild(tdEnd);
 
