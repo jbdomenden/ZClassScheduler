@@ -53,6 +53,7 @@ const manualCourseCode = document.getElementById("manualCourseCode");
 const manualCurriculumCode = document.getElementById("manualCurriculumCode");
 const manualTemplateBtn = document.getElementById("manualTemplateBtn");
 const manualAddRowBtn = document.getElementById("manualAddRowBtn");
+const manualAddElectiveBtn = document.getElementById("manualAddElectiveBtn");
 const manualSubjectsTbody = document.querySelector("#manualSubjectsTable tbody");
 
 let manualSubjects = [];
@@ -191,16 +192,39 @@ async function apiHardDeleteCurriculum(id) {
 
 function yearTermChoicesForDept(deptRaw) {
     const d = String(deptRaw || "").trim().toUpperCase();
-    const max = (d === "JHS" || d === "SHS") ? 4 : 8;
-    return Array.from({ length: max }, (_, i) => String(i + 1));
+    const base = [
+        { value: "1", label: "1Y1T" },
+        { value: "2", label: "1Y2T" },
+        { value: "3", label: "2Y1T" },
+        { value: "4", label: "2Y2T" },
+    ];
+
+    if (d === "JHS" || d === "SHS") {
+        return base;
+    }
+
+    return [
+        ...base,
+        { value: "5", label: "3Y1T" },
+        { value: "6", label: "3Y2T" },
+        { value: "7", label: "4Y1T" },
+        { value: "8", label: "4Y2T" },
+        { value: "9", label: "Elective Block" },
+    ];
+}
+
+function isTertiaryDept(deptRaw) {
+    const d = String(deptRaw || "").trim().toUpperCase();
+    return d === "TERTIARY_STI" || d === "TERTIARY_NAMEI";
 }
 
 function ensureManualRow(idx) {
-    if (!manualSubjects[idx]) manualSubjects[idx] = { yearTerm: "1", code: "", name: "" };
+    if (!manualSubjects[idx]) manualSubjects[idx] = { yearTerm: "1", code: "", name: "", electiveSub: "" };
     const r = manualSubjects[idx];
     r.yearTerm = String(r.yearTerm || "1").trim() || "1";
     r.code = String(r.code || "").trim();
     r.name = String(r.name || "").trim();
+    r.electiveSub = String(r.electiveSub || "").trim();
     return r;
 }
 
@@ -209,6 +233,7 @@ function renderManualSubjects() {
 
     const dept = String(manualDeptSelect?.value || "").trim();
     const choices = yearTermChoicesForDept(dept);
+    const isTertiary = isTertiaryDept(dept);
 
     if (!manualSubjects.length) {
         manualSubjectsTbody.innerHTML = `<tr><td colspan="4" class="muted">No subjects yet. Click "Create Template" or "Add Subject Row".</td></tr>`;
@@ -217,7 +242,7 @@ function renderManualSubjects() {
 
     manualSubjectsTbody.innerHTML = manualSubjects.map((row, idx) => {
         const r = ensureManualRow(idx);
-        const opts = choices.map((c) => `<option value="${escapeHtml(c)}" ${String(r.yearTerm) === String(c) ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
+        const opts = choices.map((c) => `<option value="${escapeHtml(c.value)}" ${String(r.yearTerm) === String(c.value) ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
 
         return `
 <tr data-idx="${idx}">
@@ -231,6 +256,7 @@ function renderManualSubjects() {
   </td>
   <td>
     <input data-field="name" value="${escapeHtml(r.name)}" placeholder="e.g. Introduction to Computing" style="padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%;" />
+    ${isTertiary && String(r.yearTerm) === "9" ? `<input data-field="electiveSub" value="${escapeHtml(r.electiveSub || "")}" placeholder="Elective Block Name (e.g. Networking)" style="margin-top:6px;padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%;" />` : ``}
   </td>
   <td style="text-align:center;">
     <button type="button" class="btn btn-delete btn-icon" data-remove="${idx}" aria-label="Remove row">x</button>
@@ -654,13 +680,20 @@ async function toggleCurriculum(id) {
    UPLOAD MODAL
 ============================ */
 
-if (uploadBtn) uploadBtn.addEventListener("click", async () => {
-    uploadForm.reset();
+function openUploadModal() {
+    if (uploadForm) uploadForm.reset();
     resetUploadDetectedFields();
     setUploadInputsEnabled(false);
-    uploadModal.classList.remove("hidden");
-    // User must pick department first
+    if (uploadModal) uploadModal.classList.remove("hidden");
     if (deptSelect) deptSelect.focus();
+}
+
+if (uploadBtn) uploadBtn.addEventListener("click", openUploadModal);
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("#uploadBtn");
+    if (!btn) return;
+    e.preventDefault();
+    openUploadModal();
 });
 
 if (closeUploadModalBtn) closeUploadModalBtn.addEventListener("click", () => {
@@ -709,6 +742,7 @@ function syncManualControls() {
     const enabled = !!dept;
     if (manualTemplateBtn) manualTemplateBtn.disabled = !enabled;
     if (manualAddRowBtn) manualAddRowBtn.disabled = !enabled;
+    if (manualAddElectiveBtn) manualAddElectiveBtn.disabled = !enabled || !isTertiaryDept(dept);
 }
 
 if (manualCreateBtn) {
@@ -746,8 +780,8 @@ if (manualTemplateBtn) {
             return;
         }
 
-        const yt = yearTermChoicesForDept(dept);
-        manualSubjects = yt.map((v) => ({ yearTerm: v, code: "", name: "" }));
+        const yt = yearTermChoicesForDept(dept).filter((x) => x.value !== "9");
+        manualSubjects = yt.map((v) => ({ yearTerm: v.value, code: "", name: "", electiveSub: "" }));
         renderManualSubjects();
     });
 }
@@ -759,7 +793,7 @@ if (manualAddRowBtn) {
             appAlert("Please select a Department first.");
             return;
         }
-        manualSubjects.push({ yearTerm: "1", code: "", name: "" });
+        manualSubjects.push({ yearTerm: "1", code: "", name: "", electiveSub: "" });
         renderManualSubjects();
     });
 }
@@ -777,11 +811,16 @@ if (manualCreateForm) {
         if (!code) return overlayError("Curriculum Code is required.");
 
         const subjects = (manualSubjects || [])
-            .map((r) => ({
-                code: String(r.code || "").trim(),
-                name: String(r.name || "").trim(),
-                yearTerm: String(r.yearTerm || "").trim(),
-            }))
+            .map((r) => {
+                const yearTerm = String(r.yearTerm || "").trim();
+                const code = String(r.code || "").trim();
+                let name = String(r.name || "").trim();
+                const electiveSub = String(r.electiveSub || "").trim() || "Electives";
+                if (yearTerm === "9" && name && !/\[\[EL:[^\]]+\]\]\s*$/.test(name)) {
+                    name = `${name} [[EL:${electiveSub}]]`;
+                }
+                return { code, name, yearTerm };
+            })
             .filter((r) => r.code && r.name && r.yearTerm);
 
         if (!subjects.length) {
