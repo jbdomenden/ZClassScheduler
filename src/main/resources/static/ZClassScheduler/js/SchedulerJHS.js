@@ -1,4 +1,4 @@
-const API = {
+﻿const API = {
   blocks: "/api/scheduler/jhs/blocks",
   createBlock: "/api/scheduler/jhs/blocks",
   deleteBlock: (section) => `/api/scheduler/jhs/blocks/${encodeURIComponent(section)}`,
@@ -9,6 +9,7 @@ const API = {
   rooms: "/api/settings/rooms",
   teachers: "/api/settings/teachers",
   settingsCurriculums: "/api/settings/curriculums",
+  academicPeriod: "/api/settings/academic-period/current",
 };
 
 const token = localStorage.getItem("token");
@@ -51,6 +52,7 @@ let rooms = [];
 let teachers = [];
 let sortKey = "grade";
 let sortDir = "asc";
+let activeAcademicPeriod = null;
 
 // Time policy for the schedule grid (must match backend ScheduleTimePolicy)
 const TIME_POLICY = {
@@ -80,6 +82,51 @@ async function fetchJson(url, options) {
 
   if (!txt) return null;
   return ct.includes("application/json") ? JSON.parse(txt) : txt;
+}
+
+
+function getWizardSubmitBtn() {
+  return wizardForm?.querySelector('button[type="submit"]') || null;
+}
+
+function renderAcademicPeriodHint() {
+  if (!wizardForm) return;
+  let hint = wizardForm.querySelector('[data-academic-period-hint]');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.setAttribute('data-academic-period-hint', '1');
+    hint.style.margin = '0 0 12px';
+    hint.style.padding = '8px 10px';
+    hint.style.borderRadius = '8px';
+    hint.style.fontSize = '12px';
+    wizardForm.prepend(hint);
+  }
+  const submit = getWizardSubmitBtn();
+  if (!activeAcademicPeriod) {
+    hint.style.background = '#fff1f2';
+    hint.style.border = '1px solid #fecaca';
+    hint.textContent = 'No active school year/term is configured. Schedule block creation is disabled.';
+    if (submit) submit.disabled = true;
+    return;
+  }
+
+  hint.style.background = '#eff6ff';
+  hint.style.border = '1px solid #bfdbfe';
+  hint.textContent = `Academic Period (locked by settings): ${activeAcademicPeriod.schoolYear} | Term ${activeAcademicPeriod.term}`;
+  if (submit) submit.disabled = false;
+}
+
+async function loadActiveAcademicPeriod() {
+  try {
+    const res = await fetchJson(API.academicPeriod);
+    activeAcademicPeriod = (res && res.success !== false && res.schoolYear && res.term)
+      ? { schoolYear: String(res.schoolYear), term: String(res.term) }
+      : null;
+  } catch (_err) {
+    activeAcademicPeriod = null;
+  }
+  renderAcademicPeriodHint();
+  return activeAcademicPeriod;
 }
 
 function escapeHtml(s) {
@@ -262,6 +309,20 @@ function minutesToHHMM(total) {
   return `${hh}:${mm}`;
 }
 
+function isStaffDepartment(deptRaw) {
+    const parts = String(deptRaw || "")
+        .split(/[;,|]/g)
+        .map((x) => String(x || "").trim().toUpperCase())
+        .filter(Boolean);
+    return parts.includes("STAFF") || parts.includes("NON_TEACHING");
+}
+
+function isLaboratoryRoom(roomObj) {
+    const typ = String(roomObj?.type || roomObj?.roomType || roomObj?.category || "").toUpperCase();
+    const code = String(roomObj?.code || roomObj?.name || "").toUpperCase();
+    return typ.includes("LAB") || code.includes("LAB");
+}
+
 function overlaps(sm, em, sm2, em2) {
   return sm < em2 && sm2 < em;
 }
@@ -304,6 +365,56 @@ function findSectionKeyForRowId(rowId) {
   return "";
 }
 
+async function fetchAllSchedulerRowsForSuggestion() {
+  const endpoints = [
+    "/api/scheduler/tertiary/blocks",
+    "/api/scheduler/namei/blocks",
+    "/api/scheduler/shs/blocks",
+    "/api/scheduler/jhs/blocks",
+  ];
+
+  const results = await Promise.all(endpoints.map(async (url) => {
+    try {
+      const res = await fetch(url, { headers: { "Accept": "application/json", ...authHeaders() } });
+      if (!res.ok) {
+        console.warn("[suggest] unable to load rows from", url, "status", res.status);
+        return [];
+      }
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+
+      const out = [];
+      data.forEach((b) => {
+        const sectionKey = String(b?.sectionCode || b?.section || "").trim();
+        (b?.rows || []).forEach((r) => {
+          const day = String(r?.dayOfWeek || "").trim().toUpperCase();
+          const start = String(r?.timeStart || "").trim();
+          const end = String(r?.timeEnd || "").trim();
+          if (!day || !start || !end) return;
+          const sm = hhmmToMinutes(start);
+          const em = hhmmToMinutes(end);
+          if (sm == null || em == null || em <= sm) return;
+          out.push({
+            id: String(r?.id || ""),
+            day,
+            sm,
+            em,
+            roomId: r?.roomId ? String(r.roomId) : "",
+            teacherId: r?.teacherId ? String(r.teacherId) : "",
+            sectionKey,
+          });
+        });
+      });
+      return out;
+    } catch (err) {
+      console.warn("[suggest] fetch failed for", url, err);
+      return [];
+    }
+  }));
+
+  return results.flat();
+}
+
 async function suggestForEditModal() {
   if (!editSuggestBox) return;
   editSuggestBox.textContent = "";
@@ -335,7 +446,24 @@ async function suggestForEditModal() {
       .sort((a, b) => Math.abs(a - duration) - Math.abs(b - duration))[0];
   }
 
-  const allRows = flattenScheduledRows().filter((r) => r.id !== schedId);
+  const selectedRoomId = String((typeof editRoom !== "undefined" ? editRoom?.value : roomSelect?.value) || "").trim();
+  const selectedRoomObj = (rooms || []).find((r) => String(r?.id || "") === selectedRoomId);
+  const noExplicitDuration = !(smPref != null && emPref != null && emPref > smPref);
+  if (selectedRoomObj && isLaboratoryRoom(selectedRoomObj) && noExplicitDuration) {
+    duration = 180;
+  }
+
+  const localRows = flattenScheduledRows();
+  const globalRows = await fetchAllSchedulerRowsForSuggestion();
+  const seen = new Set();
+  const allRows = [...localRows, ...globalRows]
+    .filter((r) => r.id !== schedId)
+    .filter((r) => {
+      const k = `${r.id}|${r.day}|${r.sm}|${r.em}|${r.roomId}|${r.teacherId}|${r.sectionKey}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
 
   const daysBase = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
   const dayCandidates = dayPref && daysBase.includes(dayPref)
@@ -366,7 +494,9 @@ async function suggestForEditModal() {
     if (idx > 0) roomCandidates.unshift(roomCandidates.splice(idx, 1)[0]);
   }
 
-  for (const day of dayCandidates) {
+  const roomBlockedHints = [];
+
+    for (const day of dayCandidates) {
     const teacherBusy = allRows.filter((r) => r.day === day && r.teacherId === selectedTeacherId);
     const sectionBusy = allRows.filter((r) => r.day === day && r.sectionKey === sectionKey);
 
@@ -383,7 +513,10 @@ async function suggestForEditModal() {
         if (!rid) return false;
         return !allRows.some((x) => x.day === day && x.roomId === rid && overlaps(sm, em, x.sm, x.em));
       });
-      if (!freeRoom) continue;
+      if (!freeRoom) {
+            if (roomBlockedHints.length < 3) roomBlockedHints.push(`${day} ${start}-${minutesToHHMM(em)}`);
+            continue;
+        }
 
       const endHHMM = minutesToHHMM(em);
       if (editDay) editDay.value = day;
@@ -400,7 +533,8 @@ async function suggestForEditModal() {
     }
   }
 
-  editSuggestBox.textContent = "No available Day/Time/Room found that fits both the Instructor and the Section.";
+  editSuggestBox.textContent = "No available Day/Time/Room found that fits both the Instructor and the Section." +
+        (roomBlockedHints.length ? `\nClosest time options blocked by room conflicts: ${roomBlockedHints.join(", ")}` : "");
 }
 
 function buildHalfHourRange(fromHHMM, toHHMM) {
@@ -478,9 +612,10 @@ function populateCurriculums(programCode) {
     list.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join("");
 }
 
-function openWizard() {
+async function openWizard() {
   if (!wizardModal) return;
   wizardModal.classList.remove("hidden");
+  await loadActiveAcademicPeriod();
 }
 
 function closeWizard() {
@@ -503,7 +638,7 @@ async function loadSearchComponent() {
   const container = document.getElementById("searchContainer");
   if (!container) return;
 
-  const res = await fetch("/ZclassScheduler/html/GlobalSearch.html");
+  const res = await fetch("/ZClassScheduler/html/GlobalSearch.html");
   container.innerHTML = await res.text();
 
   searchInput = document.querySelector("#searchInput");
@@ -550,10 +685,10 @@ async function loadLookups() {
       .toUpperCase()
       .replace(/\s+/g, "_")
       .replace(/-/g, "_");
-    const disallowed = new Set(["CHECKER", "NON_TEACHING"]);
+    const disallowed = new Set(["CHECKER", "NON_TEACHING", "STAFF"]);
 
     teachers = raw
-      .filter(t => !disallowed.has(normRole(t?.role)))
+      .filter(t => !disallowed.has(normRole(t?.role)) && !isStaffDepartment(t?.department))
       .map(t => ({ ...t }));
   } catch (e) {
     console.warn("load teachers failed:", e);
@@ -810,6 +945,12 @@ wizardForm?.addEventListener("submit", async (e) => {
   const curriculumId = (curriculumSelect.value || "").trim();
   const grade = parseInt(gradeSelect.value, 10);
   const sectionName = (sectionNameInput.value || "").trim();
+
+  if (!activeAcademicPeriod) await loadActiveAcademicPeriod();
+  if (!activeAcademicPeriod) {
+    appAlert("No active school year/term is configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.");
+    return;
+  }
 
   if (!curriculumId || !Number.isFinite(grade) || !sectionName) {
     appAlert("Please complete Program, Curriculum, Grade, and Section Name.");

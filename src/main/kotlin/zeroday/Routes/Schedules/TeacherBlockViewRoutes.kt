@@ -14,7 +14,7 @@ fun Application.teacherBlockViewRoutes() {
     routing {
         authenticate("auth-jwt") {
             get("/api/schedules/teacher-blocks") {
-                call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "TEACHER", "CHECKER", "NON_TEACHING")) ?: return@get
+                call.requireRole(setOf("ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL", "TEACHER", "CHECKER", "STAFF")) ?: return@get
 
                 val teacherIdRaw = call.request.queryParameters["teacherId"]?.trim()
                 if (teacherIdRaw.isNullOrBlank()) {
