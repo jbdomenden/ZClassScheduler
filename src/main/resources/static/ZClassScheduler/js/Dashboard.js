@@ -1,4 +1,4 @@
-// Dashboard.js (module)
+﻿// Dashboard.js (module)
 // Room Overview uses the same time-slot table grid feel as SchedulesRoom,
 // but with rooms as the column headers.
 
@@ -93,7 +93,7 @@ async function loadRoomOverview() {
     .filter((r) => (String(r.status || "Active").toLowerCase() === "active"))
     .map((r) => String(r.code || "").trim())
     .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+    .sort(floorNumericSort);
 
   const data = (dataRaw || []).map((s) => ({
     roomCode: String(s.roomCode || "").trim(),
@@ -104,7 +104,7 @@ async function loadRoomOverview() {
     teacher: String(s.teacher || "\u2014").trim(),
   }));
 
-  const fallbackRooms = [...new Set(data.map((d) => d.roomCode).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const fallbackRooms = [...new Set(data.map((d) => d.roomCode).filter(Boolean))].sort(floorNumericSort);
   const rooms = allRooms.length ? allRooms : fallbackRooms;
 
   function render(roomsToShow) {
@@ -188,6 +188,28 @@ async function loadRoomOverview() {
   render(rooms);
 }
 
+
+function normalizeRoomTypeLabel(v) {
+  const x = String(v || "").trim().toUpperCase();
+  if (x === "LAB" || x === "LABORATORY") return "Laboratory";
+  if (x === "LECTURE") return "Lecture";
+  if (x === "MULTIPURPOSE") return "Multipurpose";
+  return String(v || "").trim();
+}
+
+function floorNumericSort(a, b) {
+  const parse = (v) => {
+    const s = String(v || "").trim().toLowerCase();
+    if (!s) return Number.POSITIVE_INFINITY;
+    if (s === "g" || s === "gf" || s.includes("ground")) return 0;
+    const m = s.match(/-?\d+/);
+    return m ? Number.parseInt(m[0], 10) : Number.POSITIVE_INFINITY;
+  };
+  const pa = parse(a); const pb = parse(b);
+  if (pa !== pb) return pa - pb;
+  return String(a || "").localeCompare(String(b || ""));
+}
+
 function utilColorClass(percent) {
   if (percent >= 80) return "high";
   if (percent >= 50) return "medium";
@@ -254,7 +276,7 @@ async function loadRoomUtilization() {
       String(r.code || r.roomCode || r.name || "").trim(),
       {
         floor: String(r.floor || "").trim(),
-        type: String(r.type || "").trim(), // LECTURE/LAB/MULTIPURPOSE (API)
+        type: normalizeRoomTypeLabel(r.type),
       },
     ])
   );
@@ -265,11 +287,11 @@ async function loadRoomUtilization() {
   // Populate filter options once.
   if (floorSelect && floorSelect.options.length <= 1) {
     const floors = [...new Set((roomsRaw || []).map((r) => String(r.floor || "").trim()).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b));
+      .sort(floorNumericSort);
     floors.forEach((f) => floorSelect.add(new Option(f, f)));
   }
   if (typeSelect && typeSelect.options.length <= 1) {
-    const types = [...new Set((roomsRaw || []).map((r) => String(r.type || "").trim()).filter(Boolean))]
+    const types = [...new Set((roomsRaw || []).map((r) => normalizeRoomTypeLabel(r.type)).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b));
     types.forEach((t) => typeSelect.add(new Option(t, t)));
   }
@@ -290,6 +312,8 @@ async function loadRoomUtilization() {
     const days = Array.isArray(utilRaw?.days) ? utilRaw.days : UTIL_DAYS.slice();
     const overallByDay = (utilRaw && typeof utilRaw === "object" && utilRaw.overallByDay) ? utilRaw.overallByDay : {};
     const overallTotal = Number(utilRaw?.overallTotal) || 0;
+    const weekOverallLabel = document.getElementById("utilWeekOverall");
+    if (weekOverallLabel) weekOverallLabel.textContent = `Overall: ${overallTotal.toFixed(2)}%`;
 
     const rows = (Array.isArray(utilRaw?.rooms) ? utilRaw.rooms : []).map((r) => ({
       roomName: String(r?.roomName || "").trim(),
@@ -362,6 +386,9 @@ async function loadRoomUtilization() {
     renderWeek(rows);
     return;
   }
+
+  const weekOverallLabel = document.getElementById("utilWeekOverall");
+  if (weekOverallLabel) weekOverallLabel.textContent = "Overall: --%";
 
   // Day mode: list
   const data = (utilRaw || []).map((r) => ({
@@ -623,7 +650,7 @@ async function loadConflicts() {
 async function init() {
   if (!token) {
     // Keep it simple: redirect to login if dashboard is opened without auth.
-    window.location.href = "/ZclassScheduler/html/Login.html";
+    window.location.href = "/ZClassScheduler/html/Login.html";
     return;
   }
 

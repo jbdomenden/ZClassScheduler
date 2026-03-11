@@ -9,6 +9,7 @@ import zeroday.Models.db.tables.Curriculums
 import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
 import java.util.UUID
+import zeroday.Queries.Settings.SchoolHoursRepository
 
 object SchedulerNAMEI_Service {
 
@@ -22,6 +23,9 @@ object SchedulerNAMEI_Service {
 
     fun createBlock(courseCode: String, curriculumId: UUID, year: Int, term: Int): String = transaction {
         validateInputs(courseCode, year, term)
+
+        val activePeriod = SchoolHoursRepository.getActivePeriod()
+            ?: throw IllegalStateException("No active school year and term configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.")
 
         val curriculum = Curriculums.select { Curriculums.id eq curriculumId }.singleOrNull()
             ?: throw IllegalArgumentException("Curriculum not found.")
@@ -72,6 +76,8 @@ object SchedulerNAMEI_Service {
                 it[Schedules.subjectName] = subjectName
                 it[Schedules.year] = year
                 it[Schedules.term] = term
+                it[Schedules.schoolYear] = activePeriod.schoolYear
+                it[Schedules.academicTerm] = activePeriod.term
                 it[Schedules.levelIndex] = level
                 it[Schedules.isElective] = false
                 it[Schedules.isDuplicateRow] = false

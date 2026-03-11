@@ -17,6 +17,7 @@ object CourseRepository {
                 it[code] = req.code.uppercase()
                 it[name] = req.name
                 it[levelType] = req.levelType
+            it[department] = req.department.trim().uppercase()
             }
         }
         return id
@@ -29,6 +30,7 @@ object CourseRepository {
                 code = it[Courses.code],
                 name = it[Courses.name],
                 levelType = it[Courses.levelType],
+                department = it[Courses.department],
                 active = it[Courses.active]
             )
         }
@@ -39,6 +41,7 @@ object CourseRepository {
             it[code] = req.code.uppercase()
             it[name] = req.name
             it[levelType] = req.levelType
+            it[department] = req.department.trim().uppercase()
         }
     }
 

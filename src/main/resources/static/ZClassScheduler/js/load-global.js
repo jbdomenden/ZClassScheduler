@@ -1,4 +1,4 @@
-(async function () {
+﻿(async function () {
     // =========================
     // PAGE SPLASH / BUFFER (GLOBAL)
     // =========================
@@ -22,11 +22,11 @@
 #${SPLASH_ID}.show{ opacity:1; pointer-events:auto; }
 #${SPLASH_ID} .splash-card{
     display:flex; flex-direction:column; align-items:center; gap:10px;
-    padding:18px 22px;
-    border-radius:14px;
+    padding:20px 24px;
+    border-radius:16px;
     background:#fff;
-    box-shadow:0 10px 30px rgba(0,0,0,.12);
-    min-width:200px;
+    box-shadow:0 14px 42px rgba(2,6,23,.16);
+    min-width:240px;
 }
 #${SPLASH_ID} .spinner{
     width:34px; height:34px;
@@ -37,9 +37,34 @@
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 #${SPLASH_ID} .txt{
-    font-size:13px;
-    opacity:.8;
+    font-size:14px;
+    font-weight:600;
+    opacity:.86;
     letter-spacing:.2px;
+}
+#${SPLASH_ID} .subtxt{
+    margin-top:-3px;
+    font-size:12px;
+    color:#64748b;
+}
+#${SPLASH_ID} .progress{
+    width:min(300px,58vw);
+    height:6px;
+    border-radius:999px;
+    background:#e2e8f0;
+    overflow:hidden;
+    margin-top:4px;
+}
+#${SPLASH_ID} .progress > i{
+    display:block;
+    width:35%; height:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,#0f172a,#2563eb);
+    animation:splashSlide 1.1s linear infinite;
+}
+@keyframes splashSlide {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(330%); }
 }
 `;
         document.head.appendChild(style);
@@ -49,15 +74,29 @@
         overlay.innerHTML = `
 <div class="splash-card" role="status" aria-live="polite">
     <div class="spinner"></div>
-<div class="txt">Loading...</div>
+    <div class="txt" id="${SPLASH_ID}Title">Loading...</div>
+    <div class="subtxt" id="${SPLASH_ID}Sub">Preparing page resources</div>
+    <div class="progress" aria-hidden="true"><i></i></div>
 </div>
 `;
         document.body.appendChild(overlay);
     }
 
-    function showSplash() {
+    function setSplashText(title, sub) {
+        const t = document.getElementById(`${SPLASH_ID}Title`);
+        const s = document.getElementById(`${SPLASH_ID}Sub`);
+        if (t && title) t.textContent = title;
+        if (s && sub) s.textContent = sub;
+    }
+
+    function showSplash(mode = "loading") {
         const el = document.getElementById(SPLASH_ID);
         if (!el) return;
+        if (mode === "nav") {
+            setSplashText("Opening page...", "Loading the next screen");
+        } else {
+            setSplashText("Loading...", "Preparing page resources");
+        }
         el.classList.add("show");
     }
 
@@ -74,7 +113,8 @@
 
     function beginBusy() {
         pendingFetches += 1;
-        minVisibleUntil = Math.max(minVisibleUntil, Date.now() + 250);
+        minVisibleUntil = Math.max(minVisibleUntil, Date.now() + 320);
+        setSplashText("Loading data...", "Fetching latest records");
 
         // Show after a short delay to avoid flicker for fast requests.
         if (showDelayTimer == null) {
@@ -126,7 +166,14 @@
                     tracked = true;
                     beginBusy();
                 }
-                return await _fetch(...args);
+                try {
+                    return await _fetch(...args);
+                } catch (err) {
+                    if (shouldTrack) {
+                        console.warn("[load-global] fetch failed:", u || "(unknown)", err);
+                    }
+                    throw err;
+                }
             } finally {
                 // If we showed the splash for this request, close it when done.
                 if (tracked) endBusy();
@@ -171,7 +218,7 @@
         document.addEventListener("click", (e) => {
             const a = e.target.closest("a");
             if (!isInternalNavigableLink(a)) return;
-            showSplash();
+            showSplash("nav");
 
             // If navigation doesn't happen (preventDefault/AJAX), don't get stuck
             setTimeout(() => {
@@ -182,7 +229,7 @@
         // Show splash on form submits too (optional)
         document.addEventListener("submit", (e) => {
             // Only for real submits
-            showSplash();
+            showSplash("nav");
 
             // If the submit is prevented (AJAX forms), immediately hide again.
             // This avoids the splash getting stuck when navigation does not occur.
@@ -204,7 +251,7 @@
 
         // If browser is unloading (manual refresh/navigation), show splash quickly
         window.addEventListener("beforeunload", () => {
-            showSplash();
+            showSplash("nav");
         });
     }
 
@@ -375,7 +422,7 @@
             // Modal walkthrough (what to input + sample demo)
             { title: "First name", text: "Enter the user's first name.", selector: "#empFn", ensure: [{ type: "click", selector: "#addTeacherBtn", real: true, ms: 250 }], demo: { actions: [{ type: "type", selector: "#empFn", value: "Juan", ms: 700 }] } },
             { title: "Last name", text: "Enter the user's last name.", selector: "#empLn", demo: { actions: [{ type: "type", selector: "#empLn", value: "Dela Cruz", ms: 700 }] } },
-            { title: "Department", text: "Pick the department. Use STAFF for staff users.", selector: "#type", demo: { actions: [{ type: "select", selector: "#type", value: "ICT", ms: 700 }] } },
+            { title: "Department", text: "Pick the department. Use NON_TEACHING department for staff users.", selector: "#type", demo: { actions: [{ type: "select", selector: "#type", value: "ICT", ms: 700 }] } },
             { title: "Email", text: "Enter the login email address.", selector: "#email", demo: { actions: [{ type: "type", selector: "#email", value: "juan.delacruz@school.edu", ms: 700 }] } },
             { title: "Role", text: "Choose the role. Admin permissions may limit which roles you can assign.", selector: "#role", demo: { actions: [{ type: "select", selector: "#role", value: "TEACHER", ms: 700 }] } },
             { title: "Default password", text: "Password is generated automatically.\nTo reset later, open Edit and click Reset Password.", selector: "#teacherModal .hint" },
@@ -1300,8 +1347,12 @@
         const r = String(roleRaw || "").trim().toLowerCase();
         if (r === "super_admin" || r === "superadmin" || r === "super admin") return "SUPER_ADMIN";
         if (r === "admin") return "ADMIN";
+        if (r === "academic_head" || r === "academic head") return "ACADEMIC_HEAD";
+        if (r === "program_head" || r === "program head") return "PROGRAM_HEAD";
+        if (r === "scheduler") return "SCHEDULER";
+        if (r === "assistant_principal" || r === "assistant principal") return "ASSISTANT_PRINCIPAL";
         if (r === "checker") return "CHECKER";
-        if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching") return "NON_TEACHING";
+        if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching" || r === "staff") return "STAFF";
         return "TEACHER";
     }
 
@@ -1378,21 +1429,22 @@
     // =========================
     const PAGE_RULES = [
         // Teachers can only view the schedule pages.
-        { file: "Dashboard.html", allow: ["ADMIN", "SUPER_ADMIN"] },
+        { file: "Dashboard.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
 
         // Scheduler pages (building schedules) are ADMIN/SUPER_ADMIN only.
-        { file: "SchedulerSTI.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "SchedulerNAMEI.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "SchedulerJHS.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "SchedulerSHS.html", allow: ["ADMIN", "SUPER_ADMIN"] },
+        { file: "SchedulerSTI.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "SchedulerNAMEI.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "SchedulerJHS.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "SchedulerSHS.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
 
         // Settings pages
-        { file: "ManageTeacher.html", allow: ["ADMIN", "SUPER_ADMIN"] },
-        { file: "ManageRoom.html", allow: ["SUPER_ADMIN"] },
-        { file: "ManageCurriculum.html", allow: ["SUPER_ADMIN"] },
-        { file: "ManageCourse.html", allow: ["SUPER_ADMIN"] },
-        { file: "AuditLogs.html", allow: ["SUPER_ADMIN"] },
-        { file: "CheckerLogs.html", allow: ["CHECKER", "ADMIN", "SUPER_ADMIN"] },
+        { file: "ManageTeacher.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "ManageRoom.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "ManageCurriculum.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "ManageCourse.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "AuditLogs.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
+        { file: "CheckerLogs.html", allow: ["CHECKER", "ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "ScheduleLogs.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
     ];
 
     function currentFileName() {
@@ -1401,7 +1453,15 @@
     }
 
     function redirectUnauthorized(role) {
-        if (role === "TEACHER" || role === "CHECKER" || role === "NON_TEACHING") {
+        if (role === "TEACHER") {
+            window.location.href = "/ZClassScheduler/html/SchedulesTeacher.html";
+            return;
+        }
+        if (role === "CHECKER") {
+            window.location.href = "/ZClassScheduler/html/SchedulesRoom.html";
+            return;
+        }
+        if (role === "STAFF") {
             window.location.href = "/ZClassScheduler/html/SchedulesOverview.html";
             return;
         }
@@ -1535,9 +1595,9 @@
     enforceDirectUrlRules(role);
 
     await Promise.all([
-        inject("global-header", "/ZclassScheduler/html/GlobalHeader.html", "header"),
-        inject("global-nav", "/ZclassScheduler/html/GlobalSidebar.html", "nav"),
-        inject("searchContainer", "/ZclassScheduler/html/GlobalSearch.html", "search")
+        inject("global-header", "/ZClassScheduler/html/GlobalHeader.html", "header"),
+        inject("global-nav", "/ZClassScheduler/html/GlobalSidebar.html", "nav"),
+        inject("searchContainer", "/ZClassScheduler/html/GlobalSearch.html", "search")
     ]);
 
     // Apply role visibility again after partials are injected (prevents a brief flash of restricted links).

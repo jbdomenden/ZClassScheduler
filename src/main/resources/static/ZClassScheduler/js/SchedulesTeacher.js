@@ -259,6 +259,14 @@ function isGridAligned(startHHMM, endHHMM) {
   return true;
 }
 
+function isStaffDepartment(deptRaw) {
+  const parts = String(deptRaw || "")
+    .split(/[;,|]/g)
+    .map((x) => String(x || "").trim().toUpperCase())
+    .filter(Boolean);
+  return parts.includes("STAFF") || parts.includes("NON_TEACHING");
+}
+
 function teacherFullName(t) {
   if (!t) return "\u2014";
   return `${t.department || ""} ${t.firstName || ""} ${t.lastName || ""}`
@@ -278,7 +286,7 @@ async function loadTeacherScheduleData() {
   ]);
 
   const teachers = (teachersRaw || [])
-    .filter((t) => (t.status || "Active").toLowerCase() === "active")
+    .filter((t) => (t.status || "Active").toLowerCase() === "active" && !isStaffDepartment(t?.department))
     .map((t) => ({
       id: String(t.id),
       label: teacherFullName(t),
@@ -308,6 +316,7 @@ async function loadTeacherScheduleData() {
 
       const teacher = teacherById.get(teacherId);
       if (!teacher) return;
+      if (isStaffDepartment(teacher?.department)) return;
 
       entries.push({
         day,
