@@ -7,5 +7,6 @@ import kotlinx.serialization.Serializable
 data class CourseRequest(
     val code: String,
     val name: String,
-    val levelType: LevelType
+    val levelType: LevelType,
+    val department: String = ""
 )

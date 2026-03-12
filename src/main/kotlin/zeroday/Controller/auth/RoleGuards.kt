@@ -6,8 +6,6 @@ import io.ktor.server.auth.principal
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 
-private fun String?.normRole(): String =
-    (this ?: "").trim().uppercase()
 
 data class JwtClaims(
     val userKey: String,
@@ -20,8 +18,7 @@ fun ApplicationCall.jwtClaimsOrNull(): JwtClaims? {
     val userKey = p.payload.getClaim("userId")?.asString()?.trim()
         ?: p.payload.subject?.trim()
         ?: return null
-    val role = p.payload.getClaim("role")?.asString()?.normRole()
-        ?: return null
+    val role = RoleCatalog.normalize(p.payload.getClaim("role")?.asString())
     val email = p.payload.getClaim("email")?.asString()?.trim()?.takeIf { it.isNotEmpty() }
     return JwtClaims(userKey = userKey, role = role, email = email)
 }
@@ -29,11 +26,11 @@ fun ApplicationCall.jwtClaimsOrNull(): JwtClaims? {
 suspend fun ApplicationCall.requireRole(allowed: Set<String>): JwtClaims? {
     val claims = jwtClaimsOrNull()
     if (claims == null) {
-        respond(HttpStatusCode.Unauthorized, mapOf("message" to "Unauthorized"))
+        respond(HttpStatusCode.Unauthorized, mapOf("success" to false, "message" to "Unauthorized", "code" to "UNAUTHORIZED"))
         return null
     }
-    if (!allowed.contains(claims.role)) {
-        respond(HttpStatusCode.Forbidden, mapOf("message" to "Forbidden"))
+    if (!RoleCatalog.satisfies(claims.role, allowed)) {
+        respond(HttpStatusCode.Forbidden, mapOf("success" to false, "message" to "Forbidden", "code" to "FORBIDDEN"))
         return null
     }
     return claims

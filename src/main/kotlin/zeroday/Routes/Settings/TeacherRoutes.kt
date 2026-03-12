@@ -35,8 +35,9 @@ private fun normalizeRole(roleRaw: String?): String {
         "SUPER_ADMIN" -> "SUPER_ADMIN"
         "ADMIN" -> "ADMIN"
         "CHECKER" -> "CHECKER"
-        "NONTEACHING" -> "NON_TEACHING"
-        "NON_TEACHING" -> "NON_TEACHING"
+        "NONTEACHING" -> "STAFF"
+        "NON_TEACHING" -> "STAFF"
+        "STAFF" -> "STAFF"
         "TEACHER" -> "TEACHER"
         "INSTRUCTOR" -> "TEACHER"
         else -> r
@@ -114,17 +115,17 @@ fun Application.teacherManagementRoutes() {
                             return@post
                         }
                         val actorDepts = TeacherRepository.findDepartmentsByEmail(actorEmail)
-                        val isStaffAdmin = actorDepts.contains("STAFF")
+                        val isStaffAdmin = actorDepts.contains("NON_TEACHING") || actorDepts.contains("STAFF")
 
                         // Role creation limits for ADMIN
                         if (isStaffAdmin) {
-                            if (requestedRole != "CHECKER" && requestedRole != "NON_TEACHING") {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only create CHECKER or NON_TEACHING users."))
+                            if (requestedRole != "CHECKER" && requestedRole != "STAFF") {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only create CHECKER or STAFF users."))
                                 return@post
                             }
                             val reqDepts = parseDepartments(req.department)
-                            if (reqDepts != setOf("STAFF")) {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins may only create users under STAFF department."))
+                            if (reqDepts != setOf("NON_TEACHING")) {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins may only create users under NON_TEACHING department."))
                                 return@post
                             }
                         } else {
@@ -210,7 +211,7 @@ fun Application.teacherManagementRoutes() {
                             return@put
                         }
                         val actorDepts = TeacherRepository.findDepartmentsByEmail(actorEmail)
-                        val isStaffAdmin = actorDepts.contains("STAFF")
+                        val isStaffAdmin = actorDepts.contains("NON_TEACHING") || actorDepts.contains("STAFF")
 
                         val targetIdentity = TeacherRepository.findIdentityById(id)
                         if (targetIdentity == null) {
@@ -237,17 +238,17 @@ fun Application.teacherManagementRoutes() {
                         // Role update limits for ADMIN
                         if (isStaffAdmin) {
                             val tr = normalizeRole(targetIdentity.role)
-                            if (tr != "CHECKER" && tr != "NON_TEACHING") {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only edit CHECKER or NON_TEACHING users."))
+                            if (tr != "CHECKER" && tr != "STAFF") {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only edit CHECKER or STAFF users."))
                                 return@put
                             }
-                            if (requestedRole != "CHECKER" && requestedRole != "NON_TEACHING") {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only set role to CHECKER or NON_TEACHING."))
+                            if (requestedRole != "CHECKER" && requestedRole != "STAFF") {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only set role to CHECKER or STAFF."))
                                 return@put
                             }
                             val reqDepts = parseDepartments(req.department)
-                            if (reqDepts != setOf("STAFF")) {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins may only manage users under STAFF department."))
+                            if (reqDepts != setOf("NON_TEACHING")) {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins may only manage users under NON_TEACHING department."))
                                 return@put
                             }
                         } else {
@@ -326,7 +327,7 @@ fun Application.teacherManagementRoutes() {
                                 return@delete
                             }
                             val actorDepts = TeacherRepository.findDepartmentsByEmail(actorEmail)
-                            val isStaffAdmin = actorDepts.contains("STAFF")
+                            val isStaffAdmin = actorDepts.contains("NON_TEACHING") || actorDepts.contains("STAFF")
                             val targetIdentity = TeacherRepository.findIdentityById(id)
                             if (targetIdentity == null) {
                                 call.respond(HttpStatusCode.NotFound, mapOf("message" to "User not found."))
@@ -343,8 +344,8 @@ fun Application.teacherManagementRoutes() {
                             }
                             val tr = normalizeRole(targetIdentity.role)
                             if (isStaffAdmin) {
-                                if (tr != "CHECKER" && tr != "NON_TEACHING") {
-                                    call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only delete CHECKER or NON_TEACHING users."))
+                                if (tr != "CHECKER" && tr != "STAFF") {
+                                    call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only delete CHECKER or STAFF users."))
                                     return@delete
                                 }
                             } else {
@@ -382,7 +383,7 @@ fun Application.teacherManagementRoutes() {
                             return@post
                         }
                         val actorDepts = TeacherRepository.findDepartmentsByEmail(actorEmail)
-                        val isStaffAdmin = actorDepts.contains("STAFF")
+                        val isStaffAdmin = actorDepts.contains("NON_TEACHING") || actorDepts.contains("STAFF")
 
                         val targetDepts = parseDepartments(target.department)
                         if (actorDepts.isEmpty() || targetDepts.isEmpty() || actorDepts.intersect(targetDepts).isEmpty()) {
@@ -396,12 +397,12 @@ fun Application.teacherManagementRoutes() {
 
                         // If staff admin: only staff roles should be manageable here.
                         if (isStaffAdmin) {
-                            if (normalizeRole(target.role) != "CHECKER" && normalizeRole(target.role) != "NON_TEACHING") {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only reset passwords for CHECKER or NON_TEACHING users."))
+                            if (normalizeRole(target.role) != "CHECKER" && normalizeRole(target.role) != "STAFF") {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins can only reset passwords for CHECKER or STAFF users."))
                                 return@post
                             }
-                            if (targetDepts != setOf("STAFF")) {
-                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins may only manage users under STAFF department."))
+                            if (targetDepts != setOf("NON_TEACHING")) {
+                                call.respond(HttpStatusCode.Forbidden, mapOf("message" to "Staff admins may only manage users under NON_TEACHING department."))
                                 return@post
                             }
                         } else {

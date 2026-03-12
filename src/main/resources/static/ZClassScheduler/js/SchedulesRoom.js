@@ -249,7 +249,7 @@ function teacherFullName(t) {
 function normalizeRole(roleRaw) {
   const r = String(roleRaw || "").trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_");
   if (r === "SUPERADMIN") return "SUPER_ADMIN";
-  if (r === "NONTEACHING") return "NON_TEACHING";
+  if (r === "NONTEACHING") return "STAFF";
   return r || "TEACHER";
 }
 

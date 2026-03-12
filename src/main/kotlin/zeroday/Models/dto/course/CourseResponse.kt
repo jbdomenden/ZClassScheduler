@@ -9,5 +9,6 @@ data class CourseResponse(
     val code: String,
     val name: String,
     val levelType: LevelType,
+    val department: String,
     val active: Boolean
 )

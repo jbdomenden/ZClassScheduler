@@ -9,6 +9,7 @@ import zeroday.Models.db.tables.Curriculums
 import zeroday.Models.db.tables.Schedules
 import zeroday.Models.db.tables.Subjects
 import java.util.UUID
+import zeroday.Queries.Settings.SchoolHoursRepository
 
 object SchedulerSHS_Service {
 
@@ -22,6 +23,9 @@ object SchedulerSHS_Service {
 
     fun createBlock(courseCode: String, curriculumId: UUID, grade: Int, term: Int): String = transaction {
         validateInputs(courseCode, grade, term)
+
+        val activePeriod = SchoolHoursRepository.getActivePeriod()
+            ?: throw IllegalStateException("No active school year and term configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.")
 
         val curriculum = Curriculums.select { Curriculums.id eq curriculumId }.singleOrNull()
             ?: throw IllegalArgumentException("Curriculum not found.")
@@ -74,6 +78,8 @@ object SchedulerSHS_Service {
                 // reuse schedules.year as grade for SHS
                 it[Schedules.year] = grade
                 it[Schedules.term] = term
+                it[Schedules.schoolYear] = activePeriod.schoolYear
+                it[Schedules.academicTerm] = activePeriod.term
                 it[Schedules.levelIndex] = level
 
                 it[Schedules.isElective] = false

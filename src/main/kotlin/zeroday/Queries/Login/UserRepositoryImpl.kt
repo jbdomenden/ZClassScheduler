@@ -36,6 +36,13 @@ class UserRepositoryImpl : UserRepository {
         }
     }
 
+    override fun updateRoleByEmail(email: String, role: String): Boolean =
+        transaction {
+            UsersTable.update({ UsersTable.email eq email.trim().lowercase() }) {
+                it[UsersTable.role] = role.trim().uppercase()
+            } > 0
+        }
+
     fun updatePasswordByEmail(email: String, newSalt: String, newHash: String): Boolean =
         transaction {
             UsersTable.update({ UsersTable.email eq email.trim().lowercase() }) {
