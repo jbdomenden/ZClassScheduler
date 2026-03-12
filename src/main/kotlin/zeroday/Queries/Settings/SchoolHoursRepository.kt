@@ -7,6 +7,17 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
+import zeroday.Models.db.tables.AcademicBreaks
+import zeroday.Models.db.tables.ActiveAcademicPeriod
+import zeroday.Models.db.tables.SchoolDayRules
+import zeroday.Models.db.tables.SchoolHoursSettings
+import zeroday.Models.db.tables.Schedules
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.*
 
 object SchoolHoursRepository {
 

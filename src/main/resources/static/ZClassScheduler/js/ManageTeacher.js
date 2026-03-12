@@ -34,6 +34,10 @@ function normalizeRole(roleRaw) {
     const r = String(roleRaw || "").trim().toLowerCase();
     if (r === "super_admin" || r === "superadmin" || r === "super admin") return "SUPER_ADMIN";
     if (r === "admin") return "ADMIN";
+    if (r === "academic_head" || r === "academic head") return "ACADEMIC_HEAD";
+    if (r === "program_head" || r === "program head") return "PROGRAM_HEAD";
+    if (r === "scheduler") return "SCHEDULER";
+    if (r === "assistant_principal" || r === "assistant principal") return "ASSISTANT_PRINCIPAL";
     if (r === "checker") return "CHECKER";
     if (r === "staff") return "STAFF";
     if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching") return "STAFF";
@@ -68,6 +72,11 @@ function isStaffAdmin() {
 
 function isVisibleInUserManagementTable(teacher) {
     return normalizeRole(teacher?.firstname) !== "sample";
+}
+
+
+function isVisibleInUserManagementTable(teacher) {
+    return normalizeRole(teacher?.email) !== "admin@zcs.edu";
 }
 
 function canManageUser(targetTeacher) {
