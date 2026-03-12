@@ -1,12 +1,16 @@
 package zeroday.Queries.Settings
 
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import zeroday.Models.db.tables.*
+import zeroday.Models.db.tables.AcademicBreaks
+import zeroday.Models.db.tables.ActiveAcademicPeriod
+import zeroday.Models.db.tables.SchoolDayRules
+import zeroday.Models.db.tables.SchoolHoursSettings
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
-import java.util.UUID
+import java.util.*
 
 object SchoolHoursRepository {
 
