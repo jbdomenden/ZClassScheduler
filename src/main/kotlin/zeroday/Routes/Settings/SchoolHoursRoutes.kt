@@ -35,6 +35,21 @@ data class BreakCreatePayload(
     val notes: String? = null,
 )
 
+@Serializable
+data class MessageResponse(val success: Boolean, val message: String)
+
+@Serializable
+data class ActiveSchoolHoursResponse(val success: Boolean, val data: SchoolHoursRepository.ActiveConfigDto)
+
+@Serializable
+data class IdResponse(val success: Boolean, val id: String)
+
+@Serializable
+data class BreakListResponse(val success: Boolean, val items: List<SchoolHoursRepository.BreakDto>)
+
+@Serializable
+data class ActivePeriodResponse(val success: Boolean, val schoolYear: String, val term: String)
+
 fun Application.schoolHoursRoutes() {
     routing {
         authenticate("auth-jwt") {
@@ -42,9 +57,9 @@ fun Application.schoolHoursRoutes() {
                 get("/active") {
                     val cfg = SchoolHoursRepository.getActiveConfig()
                     if (cfg == null) {
-                        call.respond(HttpStatusCode.NotFound, mapOf("success" to false, "message" to "No active school-hours settings."))
+                        call.respond(HttpStatusCode.NotFound, MessageResponse(success = false, message = "No active school-hours settings."))
                     } else {
-                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "data" to cfg))
+                        call.respond(HttpStatusCode.OK, ActiveSchoolHoursResponse(success = true, data = cfg))
                     }
                 }
 
@@ -58,23 +73,23 @@ fun Application.schoolHoursRoutes() {
                         dayRules = body.dayRules.map { SchoolHoursRepository.DayRuleDto(it.dayOfWeek, it.isOpen, it.timeStart, it.timeEnd) },
                         actor = claims.email
                     )
-                    call.respond(HttpStatusCode.OK, mapOf("success" to true, "id" to id.toString()))
+                    call.respond(HttpStatusCode.OK, IdResponse(success = true, id = id.toString()))
                 }
 
                 get("/{id}/breaks") {
                     val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrNull()
                     if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "Invalid id"))
+                        call.respond(HttpStatusCode.BadRequest, MessageResponse(success = false, message = "Invalid id"))
                         return@get
                     }
-                    call.respond(mapOf("success" to true, "items" to SchoolHoursRepository.listBreaks(id)))
+                    call.respond(BreakListResponse(success = true, items = SchoolHoursRepository.listBreaks(id)))
                 }
 
                 post("/{id}/breaks") {
                     call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@post
                     val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrNull()
                     if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "Invalid id"))
+                        call.respond(HttpStatusCode.BadRequest, MessageResponse(success = false, message = "Invalid id"))
                         return@post
                     }
                     val body = call.receive<BreakCreatePayload>()
@@ -87,7 +102,7 @@ fun Application.schoolHoursRoutes() {
                         timeEnd = body.timeEnd,
                         notes = body.notes
                     )
-                    call.respond(HttpStatusCode.Created, mapOf("success" to true, "id" to bid.toString()))
+                    call.respond(HttpStatusCode.Created, IdResponse(success = true, id = bid.toString()))
                 }
             }
 
@@ -95,9 +110,12 @@ fun Application.schoolHoursRoutes() {
                 get("/current") {
                     val p = SchoolHoursRepository.getActivePeriod()
                     if (p == null) {
-                        call.respond(HttpStatusCode.NotFound, mapOf("success" to false, "message" to "No active school year and term configured."))
+                        call.respond(
+                            HttpStatusCode.NotFound,
+                            MessageResponse(success = false, message = "No active school year and term configured.")
+                        )
                     } else {
-                        call.respond(mapOf("success" to true, "schoolYear" to p.schoolYear, "term" to p.term))
+                        call.respond(ActivePeriodResponse(success = true, schoolYear = p.schoolYear, term = p.term))
                     }
                 }
             }
