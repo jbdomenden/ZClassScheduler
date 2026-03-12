@@ -15,6 +15,13 @@ import java.util.*
 object SchoolHoursRepository {
 
     data class DayRuleDto(val dayOfWeek: String, val isOpen: Boolean, val timeStart: String, val timeEnd: String)
+    data class DayRuleViewDto(
+        val id: String,
+        val dayOfWeek: String,
+        val isOpen: Boolean,
+        val timeStart: String,
+        val timeEnd: String
+    )
     data class BreakDto(
         val id: String,
         val title: String,
@@ -25,6 +32,15 @@ object SchoolHoursRepository {
         val notes: String?
     )
 
+    data class ActiveConfigDto(
+        val id: String,
+        val currentSchoolYear: String,
+        val currentTerm: String,
+        val timezone: String,
+        val dayRules: List<DayRuleViewDto>,
+        val breaks: List<BreakDto>
+    )
+
     fun getActivePeriod(): ActiveAcademicPeriod? = transaction {
         SchoolHoursSettings.select { SchoolHoursSettings.isActive eq true }
             .orderBy(SchoolHoursSettings.updatedAt to SortOrder.DESC)
@@ -33,7 +49,7 @@ object SchoolHoursRepository {
             ?.let { ActiveAcademicPeriod(it[SchoolHoursSettings.currentSchoolYear], it[SchoolHoursSettings.currentTerm]) }
     }
 
-    fun getActiveConfig(): Map<String, Any?>? = transaction {
+    fun getActiveConfig(): ActiveConfigDto? = transaction {
         val cfg = SchoolHoursSettings.select { SchoolHoursSettings.isActive eq true }
             .orderBy(SchoolHoursSettings.updatedAt to SortOrder.DESC)
             .limit(1)
@@ -41,33 +57,33 @@ object SchoolHoursRepository {
         val id = cfg[SchoolHoursSettings.id]
         val rules = SchoolDayRules.select { SchoolDayRules.schoolHoursSettingsId eq id }
             .map {
-                mapOf(
-                    "id" to it[SchoolDayRules.id].toString(),
-                    "dayOfWeek" to it[SchoolDayRules.dayOfWeek],
-                    "isOpen" to it[SchoolDayRules.isOpen],
-                    "timeStart" to it[SchoolDayRules.timeStart].toString(),
-                    "timeEnd" to it[SchoolDayRules.timeEnd].toString()
+                DayRuleViewDto(
+                    id = it[SchoolDayRules.id].toString(),
+                    dayOfWeek = it[SchoolDayRules.dayOfWeek],
+                    isOpen = it[SchoolDayRules.isOpen],
+                    timeStart = it[SchoolDayRules.timeStart].toString(),
+                    timeEnd = it[SchoolDayRules.timeEnd].toString()
                 )
             }
         val breaks = AcademicBreaks.select { (AcademicBreaks.schoolHoursSettingsId eq id) and (AcademicBreaks.isActive eq true) }
             .map {
-                mapOf(
-                    "id" to it[AcademicBreaks.id].toString(),
-                    "title" to it[AcademicBreaks.title],
-                    "breakType" to it[AcademicBreaks.breakType],
-                    "dayOfWeek" to it[AcademicBreaks.dayOfWeek],
-                    "timeStart" to it[AcademicBreaks.timeStart].toString(),
-                    "timeEnd" to it[AcademicBreaks.timeEnd].toString(),
-                    "notes" to it[AcademicBreaks.notes],
+                BreakDto(
+                    id = it[AcademicBreaks.id].toString(),
+                    title = it[AcademicBreaks.title],
+                    breakType = it[AcademicBreaks.breakType],
+                    dayOfWeek = it[AcademicBreaks.dayOfWeek],
+                    timeStart = it[AcademicBreaks.timeStart].toString(),
+                    timeEnd = it[AcademicBreaks.timeEnd].toString(),
+                    notes = it[AcademicBreaks.notes],
                 )
             }
-        mapOf(
-            "id" to id.toString(),
-            "currentSchoolYear" to cfg[SchoolHoursSettings.currentSchoolYear],
-            "currentTerm" to cfg[SchoolHoursSettings.currentTerm],
-            "timezone" to cfg[SchoolHoursSettings.timezone],
-            "rules" to rules,
-            "breaks" to breaks,
+        ActiveConfigDto(
+            id = id.toString(),
+            currentSchoolYear = cfg[SchoolHoursSettings.currentSchoolYear],
+            currentTerm = cfg[SchoolHoursSettings.currentTerm],
+            timezone = cfg[SchoolHoursSettings.timezone],
+            dayRules = rules,
+            breaks = breaks,
         )
     }
 

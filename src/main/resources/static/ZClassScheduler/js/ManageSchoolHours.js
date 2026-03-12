@@ -62,7 +62,8 @@ async function fetchActiveConfig() {
     yearInput.value = data.currentSchoolYear || "";
     termInput.value = data.currentTerm || "";
     timezoneInput.value = data.timezone || "Asia/Manila";
-    renderDayRules(Array.isArray(data.dayRules) ? data.dayRules : []);
+    const resolvedDayRules = Array.isArray(data.dayRules) ? data.dayRules : (Array.isArray(data.rules) ? data.rules : []);
+    renderDayRules(resolvedDayRules);
     showHint("Active school-hours configuration loaded.", true);
 }
 
