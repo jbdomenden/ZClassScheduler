@@ -21,7 +21,6 @@ data class DayRulePayload(val dayOfWeek: String, val isOpen: Boolean, val timeSt
 data class SchoolHoursUpsertPayload(
     val currentSchoolYear: String,
     val currentTerm: String,
-    val timezone: String = "Asia/Manila",
     val dayRules: List<DayRulePayload>
 )
 
@@ -60,7 +59,6 @@ data class SchoolHoursConfigResponse(
     val id: String,
     val currentSchoolYear: String,
     val currentTerm: String,
-    val timezone: String,
     val dayRules: List<DayRuleViewResponse>,
     val breaks: List<BreakResponse>,
 )
@@ -124,7 +122,6 @@ fun Application.schoolHoursRoutes() {
                                     id = cfg.id,
                                     currentSchoolYear = cfg.currentSchoolYear,
                                     currentTerm = cfg.currentTerm,
-                                    timezone = cfg.timezone,
                                     dayRules = cfg.dayRules.map {
                                         DayRuleViewResponse(
                                             id = it.id,
@@ -147,7 +144,6 @@ fun Application.schoolHoursRoutes() {
                     val id = SchoolHoursRepository.upsertActive(
                         schoolYear = body.currentSchoolYear,
                         term = body.currentTerm,
-                        timezone = body.timezone,
                         dayRules = body.dayRules.map { SchoolHoursRepository.DayRuleDto(it.dayOfWeek, it.isOpen, it.timeStart, it.timeEnd) },
                         actor = claims.email
                     )

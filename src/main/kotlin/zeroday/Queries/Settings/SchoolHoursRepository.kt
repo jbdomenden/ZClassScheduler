@@ -7,6 +7,7 @@ import zeroday.Models.db.tables.AcademicBreaks
 import zeroday.Models.db.tables.ActiveAcademicPeriod
 import zeroday.Models.db.tables.SchoolDayRules
 import zeroday.Models.db.tables.SchoolHoursSettings
+import zeroday.Models.db.tables.Schedules
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -36,7 +37,6 @@ object SchoolHoursRepository {
         val id: String,
         val currentSchoolYear: String,
         val currentTerm: String,
-        val timezone: String,
         val dayRules: List<DayRuleViewDto>,
         val breaks: List<BreakDto>
     )
@@ -81,7 +81,6 @@ object SchoolHoursRepository {
             id = id.toString(),
             currentSchoolYear = cfg[SchoolHoursSettings.currentSchoolYear],
             currentTerm = cfg[SchoolHoursSettings.currentTerm],
-            timezone = cfg[SchoolHoursSettings.timezone],
             dayRules = rules,
             breaks = breaks,
         )
@@ -90,7 +89,6 @@ object SchoolHoursRepository {
     fun upsertActive(
         schoolYear: String,
         term: String,
-        timezone: String,
         dayRules: List<DayRuleDto>,
         actor: String?
     ): UUID = transaction {
@@ -105,7 +103,7 @@ object SchoolHoursRepository {
                 it[SchoolHoursSettings.id] = id
                 it[currentSchoolYear] = schoolYear.trim()
                 it[currentTerm] = term.trim()
-                it[SchoolHoursSettings.timezone] = timezone.trim().ifBlank { "Asia/Manila" }
+                it[SchoolHoursSettings.timezone] = "Asia/Manila"
                 it[isActive] = true
                 it[effectiveFrom] = LocalDate.now()
                 it[createdBy] = actor
@@ -117,7 +115,7 @@ object SchoolHoursRepository {
             SchoolHoursSettings.update({ SchoolHoursSettings.id eq id }) {
                 it[currentSchoolYear] = schoolYear.trim()
                 it[currentTerm] = term.trim()
-                it[SchoolHoursSettings.timezone] = timezone.trim().ifBlank { "Asia/Manila" }
+                it[SchoolHoursSettings.timezone] = "Asia/Manila"
                 it[updatedBy] = actor
                 it[updatedAt] = now
             }
@@ -138,7 +136,30 @@ object SchoolHoursRepository {
             }
         }
 
+        backfillLegacySchedules(fallbackTerm = term)
+
         id
+    }
+
+
+    private fun backfillLegacySchedules(defaultSchoolYear: String = "2025-2026", fallbackTerm: String) {
+        val termFallback = fallbackTerm.trim().ifBlank { "1" }
+
+        Schedules
+            .select { Schedules.schoolYear eq "" }
+            .forEach { row ->
+                val id = row[Schedules.id]
+                val inferredAcademicTerm = when (row[Schedules.term]) {
+                    1 -> "1"
+                    2 -> "2"
+                    else -> termFallback
+                }
+
+                Schedules.update({ Schedules.id eq id }) {
+                    it[schoolYear] = defaultSchoolYear
+                    it[academicTerm] = inferredAcademicTerm
+                }
+            }
     }
 
     fun addBreak(

@@ -7,7 +7,6 @@ const form = document.getElementById("schoolHoursForm");
 const dayRulesBody = document.getElementById("dayRulesBody");
 const yearInput = document.getElementById("currentSchoolYear");
 const termInput = document.getElementById("currentTerm");
-const timezoneInput = document.getElementById("timezone");
 const formHint = document.getElementById("formHint");
 
 function authHeaders() {
@@ -61,7 +60,6 @@ async function fetchActiveConfig() {
 
     yearInput.value = data.currentSchoolYear || "";
     termInput.value = data.currentTerm || "";
-    timezoneInput.value = data.timezone || "Asia/Manila";
     const resolvedDayRules = Array.isArray(data.dayRules) ? data.dayRules : (Array.isArray(data.rules) ? data.rules : []);
     renderDayRules(resolvedDayRules);
     showHint("Active school-hours configuration loaded.", true);
@@ -73,7 +71,6 @@ form?.addEventListener("submit", async (e) => {
     const payload = {
         currentSchoolYear: String(yearInput.value || "").trim(),
         currentTerm: String(termInput.value || "").trim(),
-        timezone: String(timezoneInput.value || "Asia/Manila").trim(),
         dayRules: collectDayRules(),
     };
 
