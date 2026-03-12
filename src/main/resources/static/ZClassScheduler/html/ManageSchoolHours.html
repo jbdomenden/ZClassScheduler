@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZClassScheduler</title>
+    <link rel="stylesheet" href="/ZClassScheduler/css/base.css" />
+    <link rel="stylesheet" href="/ZClassScheduler/css/ManageDesign.css" />
+</head>
+<body>
+<header id="global-header" class="topbar"></header>
+<div class="container">
+    <aside id="global-nav" class="sidebar"></aside>
+    <main class="crud-scope">
+        <div class="page-header">
+            <h2>Manage School Hours</h2>
+            <p class="subtitle">Configure active school year/term and school open hours.</p>
+        </div>
+
+        <section class="panel" style="padding:16px;">
+            <form id="schoolHoursForm">
+                <div class="form-grid" style="display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;">
+                    <div>
+                        <label for="currentSchoolYear">Current School Year</label>
+                        <input id="currentSchoolYear" type="text" placeholder="2026-2027" required />
+                    </div>
+                    <div>
+                        <label for="currentTerm">Current Term</label>
+                        <select id="currentTerm" required>
+                            <option value="" disabled selected>Select Term</option>
+                            <option value="1">Term 1</option>
+                            <option value="2">Term 2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="timezone">Timezone</label>
+                        <input id="timezone" type="text" value="Asia/Manila" required />
+                    </div>
+                </div>
+
+                <div style="margin-top:16px;">
+                    <h3 style="margin:0 0 10px;">Day Rules</h3>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                            <tr><th>Day</th><th>Open</th><th>Start</th><th>End</th></tr>
+                            </thead>
+                            <tbody id="dayRulesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-actions" style="margin-top:14px;">
+                    <button class="btn btn-primary" type="submit">Save School Hours</button>
+                </div>
+            </form>
+            <p id="formHint" class="subtitle" style="margin-top:10px;"></p>
+        </section>
+    </main>
+</div>
+
+<script src="/ZClassScheduler/js/load-global.js"></script>
+<script src="/ZClassScheduler/js/GlobalSidebar.js"></script>
+<script type="module" src="/ZClassScheduler/js/ManageSchoolHours.js"></script>
+</body>
+</html>
