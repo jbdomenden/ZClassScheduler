@@ -21,6 +21,7 @@ data class DayRulePayload(val dayOfWeek: String, val isOpen: Boolean, val timeSt
 data class SchoolHoursUpsertPayload(
     val currentSchoolYear: String,
     val currentTerm: String,
+    val timezone: String = "Asia/Manila",
     val dayRules: List<DayRulePayload>
 )
 
@@ -34,74 +35,6 @@ data class BreakCreatePayload(
     val notes: String? = null,
 )
 
-@Serializable
-data class DayRuleViewResponse(
-    val id: String,
-    val dayOfWeek: String,
-    val isOpen: Boolean,
-    val timeStart: String,
-    val timeEnd: String,
-)
-
-@Serializable
-data class BreakResponse(
-    val id: String,
-    val title: String,
-    val breakType: String,
-    val dayOfWeek: String? = null,
-    val timeStart: String,
-    val timeEnd: String,
-    val notes: String? = null,
-)
-
-@Serializable
-data class SchoolHoursConfigResponse(
-    val id: String,
-    val currentSchoolYear: String,
-    val currentTerm: String,
-    val dayRules: List<DayRuleViewResponse>,
-    val breaks: List<BreakResponse>,
-)
-
-@Serializable
-data class SchoolHoursActiveResponse(
-    val success: Boolean,
-    val message: String? = null,
-    val data: SchoolHoursConfigResponse? = null,
-)
-
-@Serializable
-data class SchoolHoursUpsertResponse(
-    val success: Boolean,
-    val id: String? = null,
-    val message: String? = null,
-)
-
-@Serializable
-data class BreaksListResponse(
-    val success: Boolean,
-    val items: List<BreakResponse> = emptyList(),
-    val message: String? = null,
-)
-
-@Serializable
-data class AcademicPeriodResponse(
-    val success: Boolean,
-    val schoolYear: String? = null,
-    val term: String? = null,
-    val message: String? = null,
-)
-
-private fun toBreakResponse(item: SchoolHoursRepository.BreakDto): BreakResponse = BreakResponse(
-    id = item.id,
-    title = item.title,
-    breakType = item.breakType,
-    dayOfWeek = item.dayOfWeek,
-    timeStart = item.timeStart,
-    timeEnd = item.timeEnd,
-    notes = item.notes,
-)
-
 fun Application.schoolHoursRoutes() {
     routing {
         authenticate("auth-jwt") {
@@ -109,32 +42,9 @@ fun Application.schoolHoursRoutes() {
                 get("/active") {
                     val cfg = SchoolHoursRepository.getActiveConfig()
                     if (cfg == null) {
-                        call.respond(
-                            HttpStatusCode.NotFound,
-                            SchoolHoursActiveResponse(success = false, message = "No active school-hours settings.")
-                        )
+                        call.respond(HttpStatusCode.NotFound, mapOf("success" to false, "message" to "No active school-hours settings."))
                     } else {
-                        call.respond(
-                            HttpStatusCode.OK,
-                            SchoolHoursActiveResponse(
-                                success = true,
-                                data = SchoolHoursConfigResponse(
-                                    id = cfg.id,
-                                    currentSchoolYear = cfg.currentSchoolYear,
-                                    currentTerm = cfg.currentTerm,
-                                    dayRules = cfg.dayRules.map {
-                                        DayRuleViewResponse(
-                                            id = it.id,
-                                            dayOfWeek = it.dayOfWeek,
-                                            isOpen = it.isOpen,
-                                            timeStart = it.timeStart,
-                                            timeEnd = it.timeEnd,
-                                        )
-                                    },
-                                    breaks = cfg.breaks.map(::toBreakResponse)
-                                )
-                            )
-                        )
+                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "data" to cfg))
                     }
                 }
 
@@ -144,26 +54,27 @@ fun Application.schoolHoursRoutes() {
                     val id = SchoolHoursRepository.upsertActive(
                         schoolYear = body.currentSchoolYear,
                         term = body.currentTerm,
+                        timezone = body.timezone,
                         dayRules = body.dayRules.map { SchoolHoursRepository.DayRuleDto(it.dayOfWeek, it.isOpen, it.timeStart, it.timeEnd) },
                         actor = claims.email
                     )
-                    call.respond(HttpStatusCode.OK, SchoolHoursUpsertResponse(success = true, id = id.toString()))
+                    call.respond(HttpStatusCode.OK, mapOf("success" to true, "id" to id.toString()))
                 }
 
                 get("/{id}/breaks") {
                     val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrNull()
                     if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, BreaksListResponse(success = false, message = "Invalid id"))
+                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "Invalid id"))
                         return@get
                     }
-                    call.respond(BreaksListResponse(success = true, items = SchoolHoursRepository.listBreaks(id).map(::toBreakResponse)))
+                    call.respond(mapOf("success" to true, "items" to SchoolHoursRepository.listBreaks(id)))
                 }
 
                 post("/{id}/breaks") {
                     call.requireRole(setOf("SUPER_ADMIN", "ACADEMIC_HEAD")) ?: return@post
                     val id = runCatching { UUID.fromString(call.parameters["id"]) }.getOrNull()
                     if (id == null) {
-                        call.respond(HttpStatusCode.BadRequest, SchoolHoursUpsertResponse(success = false, message = "Invalid id"))
+                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "Invalid id"))
                         return@post
                     }
                     val body = call.receive<BreakCreatePayload>()
@@ -176,7 +87,7 @@ fun Application.schoolHoursRoutes() {
                         timeEnd = body.timeEnd,
                         notes = body.notes
                     )
-                    call.respond(HttpStatusCode.Created, SchoolHoursUpsertResponse(success = true, id = bid.toString()))
+                    call.respond(HttpStatusCode.Created, mapOf("success" to true, "id" to bid.toString()))
                 }
             }
 
@@ -184,12 +95,9 @@ fun Application.schoolHoursRoutes() {
                 get("/current") {
                     val p = SchoolHoursRepository.getActivePeriod()
                     if (p == null) {
-                        call.respond(
-                            HttpStatusCode.NotFound,
-                            AcademicPeriodResponse(success = false, message = "No active school year and term configured.")
-                        )
+                        call.respond(HttpStatusCode.NotFound, mapOf("success" to false, "message" to "No active school year and term configured."))
                     } else {
-                        call.respond(AcademicPeriodResponse(success = true, schoolYear = p.schoolYear, term = p.term))
+                        call.respond(mapOf("success" to true, "schoolYear" to p.schoolYear, "term" to p.term))
                     }
                 }
             }

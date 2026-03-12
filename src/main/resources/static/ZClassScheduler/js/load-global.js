@@ -1439,7 +1439,6 @@
 
         // Settings pages
         { file: "ManageTeacher.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
-        { file: "ManageSchoolHours.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "ManageRoom.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "ManageCurriculum.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "ManageCourse.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
