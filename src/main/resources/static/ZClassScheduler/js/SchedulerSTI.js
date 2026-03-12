@@ -19,6 +19,7 @@ const API = {
     teachers: "/api/settings/teachers",
     curriculums: "/api/settings/curriculums",
     academicPeriod: "/api/settings/academic-period/current",
+    schoolHoursActive: "/api/settings/school-hours/active",
 };
 
 const token = localStorage.getItem("token");
@@ -128,13 +129,46 @@ const ICONS = {
 };
 
 // Time policy for the schedule grid (must match backend ScheduleTimePolicy)
-const TIME_POLICY = {
+let TIME_POLICY = {
     startMin: "07:00",
     startMax: "20:30",
     endMax: "21:00",
     stepSeconds: 1800, // 30 minutes
     allowedDurations: [60, 90, 120, 180], // minutes
 };
+
+
+function applyDynamicTimePolicyFromSchoolHours(dayRules) {
+    const openRules = (dayRules || []).filter((r) => !!r?.isOpen);
+    if (!openRules.length) return;
+
+    const starts = openRules.map((r) => hhmmToMinutes(String(r?.timeStart || "").slice(0, 5))).filter((n) => Number.isFinite(n));
+    const ends = openRules.map((r) => hhmmToMinutes(String(r?.timeEnd || "").slice(0, 5))).filter((n) => Number.isFinite(n));
+    if (!starts.length || !ends.length) return;
+
+    const startMin = Math.min(...starts);
+    const endMax = Math.max(...ends);
+    const startMax = endMax - 30;
+    if (startMin >= startMax) return;
+
+    TIME_POLICY = {
+        ...TIME_POLICY,
+        startMin: minutesToHHMM(startMin),
+        startMax: minutesToHHMM(startMax),
+        endMax: minutesToHHMM(endMax),
+    };
+}
+
+async function loadSchoolHoursConfig() {
+    try {
+        const res = await fetchJson(API.schoolHoursActive);
+        const data = res?.data || null;
+        const dayRules = Array.isArray(data?.dayRules) ? data.dayRules : (Array.isArray(data?.rules) ? data.rules : []);
+        applyDynamicTimePolicyFromSchoolHours(dayRules);
+    } catch (_err) {
+        // Keep default 07:00-21:00 fallback when settings are unavailable.
+    }
+}
 
 function hhmmToMinutes(v) {
     const s = String(v || "").trim();
@@ -1241,7 +1275,7 @@ addBlockBtn.addEventListener("click", async () => {
 (async function init() {
     ensureAddRowStyles();
     await loadSearchComponent();
-    await Promise.all([loadRoomsTeachers(), loadCurriculums(), loadActiveAcademicPeriod()]);
+    await Promise.all([loadRoomsTeachers(), loadCurriculums(), loadActiveAcademicPeriod(), loadSchoolHoursConfig()]);
     initHeaderSort();
     await loadBlocks();
 

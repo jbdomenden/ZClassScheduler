@@ -23,6 +23,7 @@ const API = {
     ],
     teachers: "/api/settings/teachers",
     rooms: "/api/settings/rooms",
+    academicPeriod: "/api/settings/academic-period/current",
 };
 
 let OVERVIEW_DB = [];
@@ -36,6 +37,22 @@ async function fetchJson(url) {
     });
     if (!res.ok) throw new Error(`Request failed: ${res.status} ${res.statusText}`);
     return await res.json();
+}
+
+
+async function loadAcademicPeriodLabel() {
+    const el = document.getElementById("academicPeriodLabel");
+    if (!el) return;
+
+    try {
+        const period = await fetchJson(API.academicPeriod);
+        if (period?.success !== false && period?.schoolYear && period?.term) {
+            el.textContent = `Active Academic Period: ${period.schoolYear} | Term ${period.term}`;
+            return;
+        }
+    } catch (_err) {}
+
+    el.textContent = "Active Academic Period: Not configured";
 }
 
 function toUiDay(day) {
@@ -309,6 +326,7 @@ async function loadSearchComponent() {
 document.addEventListener("DOMContentLoaded", async () => {
 
     await loadSearchComponent();
+    await loadAcademicPeriodLabel();
     const renderWithSearch = initSearch() || null;
 
     const refreshBtn = document.getElementById("refreshOverviewBtn");
