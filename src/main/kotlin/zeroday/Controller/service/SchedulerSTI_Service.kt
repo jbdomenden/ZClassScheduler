@@ -41,10 +41,14 @@ object SchedulerSTI_Service {
         // Prefix is {COURSE}{LEVEL}
         val prefix = "$normalizedCourse$level"
 
-        // Existing sections for same course -> find max COUNT
+        // Existing sections for same course + active school year/term -> find max COUNT
         val existingSections = Schedules
             .slice(Schedules.section)
-            .select { Schedules.courseCode eq normalizedCourse }
+            .select {
+                (Schedules.courseCode eq normalizedCourse) and
+                        (Schedules.schoolYear eq activePeriod.schoolYear) and
+                        (Schedules.academicTerm eq activePeriod.term)
+            }
             .map { it[Schedules.section] }
             .distinct()
 

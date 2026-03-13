@@ -89,9 +89,20 @@ function renderAcademicPeriodHint() {
         hint.style.background = '#fff1f2';
         hint.style.border = '1px solid #fecaca';
         hint.textContent = 'No active school year/term is configured. Schedule block creation is disabled.';
+        termSelect.value = "";
+        termSelect.disabled = true;
         if (submit) submit.disabled = true;
         return;
     }
+
+    const currentTerm = String(activeAcademicPeriod.term);
+    termSelect.innerHTML = "";
+    const currentTermOption = document.createElement("option");
+    currentTermOption.value = currentTerm;
+    currentTermOption.textContent = currentTerm;
+    termSelect.appendChild(currentTermOption);
+    termSelect.value = currentTerm;
+    termSelect.disabled = true;
 
     hint.style.background = '#eff6ff';
     hint.style.border = '1px solid #bfdbfe';
@@ -1223,13 +1234,13 @@ wizardForm.addEventListener("submit", async (e) => {
     const courseCode = (programSelect.value || "").trim();
     const curriculumId = (curriculumSelect.value || "").trim();
     const year = parseInt(yearSelect.value, 10);
-    const term = parseInt(termSelect.value, 10);
 
     if (!activeAcademicPeriod) await loadActiveAcademicPeriod();
     if (!activeAcademicPeriod) {
         appAlert("No active school year/term is configured. Please contact SUPER_ADMIN or ACADEMIC_HEAD.");
         return;
     }
+    const term = parseInt(activeAcademicPeriod.term, 10);
 
     if (!courseCode || !curriculumId || !Number.isFinite(year) || !Number.isFinite(term)) {
         appAlert("Please complete Program, Curriculum, Year, and Term.");
