@@ -40,7 +40,11 @@ object SchedulerNAMEI_Service {
 
         val existingSections = Schedules
             .slice(Schedules.section)
-            .select { Schedules.courseCode eq normalizedCourse }
+            .select {
+                (Schedules.courseCode eq normalizedCourse) and
+                        (Schedules.schoolYear eq activePeriod.schoolYear) and
+                        (Schedules.academicTerm eq activePeriod.term)
+            }
             .map { it[Schedules.section] }
             .distinct()
 
