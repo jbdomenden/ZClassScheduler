@@ -1,5 +1,6 @@
 package zeroday.Queries.Settings
 
+import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -11,10 +12,11 @@ import zeroday.Models.db.tables.Schedules
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
-import java.util.*
+import java.util.UUID
 
 object SchoolHoursRepository {
 
+    @Serializable
     data class DayRuleDto(val dayOfWeek: String, val isOpen: Boolean, val timeStart: String, val timeEnd: String)
     data class DayRuleViewDto(
         val id: String,
