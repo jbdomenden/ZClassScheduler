@@ -28,7 +28,13 @@ object SchedulerNAMEI_Repository {
         val allowed = curriculumIdsForDept("TERTIARY_NAMEI")
         if (allowed.isEmpty()) return@transaction emptyList()
 
-        val rows = Schedules.select { (Schedules.curriculumId inList allowed) }.toList()
+        val activePeriod = SchoolHoursRepository.getActivePeriod() ?: return@transaction emptyList()
+
+        val rows = Schedules.select {
+            (Schedules.curriculumId inList allowed) and
+                    (Schedules.schoolYear eq activePeriod.schoolYear) and
+                    (Schedules.academicTerm eq activePeriod.term)
+        }.toList()
         if (rows.isEmpty()) return@transaction emptyList()
 
         val subjectIds = rows.map { it[Schedules.subjectId] }.distinct()

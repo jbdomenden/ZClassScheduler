@@ -56,11 +56,14 @@ object SchedulerJHS_Repository {
             .join(Curriculums, JoinType.INNER, additionalConstraint = { Schedules.curriculumId eq Curriculums.id })
             .join(Subjects, JoinType.INNER, additionalConstraint = { Schedules.subjectId eq Subjects.id })
 
+        val activePeriod = SchoolHoursRepository.getActivePeriod() ?: return@transaction emptyList()
+
         val rows = join
             .select {
                 (Curriculums.dept eq "JHS") and
                         Curriculums.active.eq(true) and
-                        Schedules.active.eq(true)
+                        Schedules.active.eq(true) and
+                        (Schedules.schoolYear eq activePeriod.schoolYear)
             }
             .orderBy(
                 Schedules.section to SortOrder.ASC,
