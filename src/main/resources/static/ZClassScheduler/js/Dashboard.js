@@ -29,6 +29,22 @@ async function authFetchJson(url) {
   return ct.includes("application/json") ? JSON.parse(txt) : txt;
 }
 
+
+async function loadAcademicPeriodLabel() {
+  const el = document.getElementById("academicPeriodLabel");
+  if (!el) return;
+
+  try {
+    const p = await authFetchJson("/api/settings/academic-period/current");
+    if (p?.success !== false && p?.schoolYear && p?.term) {
+      el.textContent = `Active Academic Period: ${p.schoolYear} | Term ${p.term}`;
+      return;
+    }
+  } catch (_err) {}
+
+  el.textContent = "Active Academic Period: Not configured";
+}
+
 function escapeHtml(str) {
   return String(str || "").replace(/[&<>"']/g, (m) => ({
     "&": "&amp;",
@@ -690,6 +706,7 @@ async function init() {
       });
     }
 
+    await loadAcademicPeriodLabel();
     await loadSummary();
     await Promise.all([
       loadRoomOverview(),

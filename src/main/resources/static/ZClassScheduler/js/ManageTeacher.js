@@ -34,8 +34,12 @@ function normalizeRole(roleRaw) {
     const r = String(roleRaw || "").trim().toLowerCase();
     if (r === "super_admin" || r === "superadmin" || r === "super admin") return "SUPER_ADMIN";
     if (r === "admin") return "ADMIN";
+    if (r === "academic_head" || r === "academic head") return "ACADEMIC_HEAD";
+    if (r === "program_head" || r === "program head") return "PROGRAM_HEAD";
+    if (r === "scheduler") return "SCHEDULER";
+    if (r === "assistant_principal" || r === "assistant principal") return "ASSISTANT_PRINCIPAL";
     if (r === "checker") return "CHECKER";
-    if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching") return "NON_TEACHING";
+    if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching" || r === "staff") return "NON_TEACHING";
     if (r === "teacher") return "TEACHER";
     return String(roleRaw || "").trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_") || "TEACHER";
 }
@@ -66,7 +70,8 @@ function isStaffAdmin() {
 
 
 function isVisibleInUserManagementTable(teacher) {
-    return normalizeRole(teacher?.email) !== "admin@zcs.edu";
+    const email = String(teacher?.email || "").trim().toLowerCase();
+    return email !== "admin@zcs.edu";
 }
 
 function canManageUser(targetTeacher) {
@@ -93,7 +98,7 @@ function canManageUser(targetTeacher) {
 }
 
 function allowedRolesForCurrentUser() {
-    if (CURRENT_USER.role === "SUPER_ADMIN") return ["TEACHER", "ADMIN", "CHECKER", "NON_TEACHING", "SUPER_ADMIN"];
+    if (CURRENT_USER.role === "SUPER_ADMIN") return ["TEACHER", "ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL", "CHECKER", "NON_TEACHING", "SUPER_ADMIN"];
     if (CURRENT_USER.role === "ADMIN") {
         if (isStaffAdmin()) return ["CHECKER", "NON_TEACHING"];
         return ["TEACHER"];
@@ -245,11 +250,17 @@ async function fetchTeachers() {
         return;
     }
 
-    const res = await fetch(API_BASE, { headers: { ...authHeaders() } });
-    if (!res.ok) throw new Error("Failed to load teachers");
-    const data = await res.json();
+    const res = await fetch(API_BASE, { headers: { ...authHeaders(), Accept: "application/json" } });
+    if (!res.ok) {
+        const body = await safeJson(res);
+        throw new Error(body?.message || `Failed to load users (${res.status})`);
+    }
+    const payload = await res.json().catch(() => null);
+    const data = Array.isArray(payload)
+        ? payload
+        : (Array.isArray(payload?.items) ? payload.items : []);
 
-    teacherDB = (data || []).map(t => {
+    teacherDB = data.map(t => {
         return {
             id: t.id,
             empId: t.empId || "",
