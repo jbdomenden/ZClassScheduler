@@ -249,6 +249,18 @@ let editingId = null;
 
 /* ================= API ================= */
 
+
+function extractTeacherArray(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== "object") return [];
+
+    const candidates = [payload.items, payload.data, payload.teachers, payload.results, payload.rows];
+    for (const c of candidates) {
+        if (Array.isArray(c)) return c;
+    }
+    return [];
+}
+
 async function fetchTeachers() {
     if (!token) {
         window.location.href = "/ZClassScheduler/html/Login.html";
@@ -261,9 +273,7 @@ async function fetchTeachers() {
         throw new Error(body?.message || `Failed to load users (${res.status})`);
     }
     const payload = await res.json().catch(() => null);
-    const data = Array.isArray(payload)
-        ? payload
-        : (Array.isArray(payload?.items) ? payload.items : []);
+    const data = extractTeacherArray(payload);
 
     teacherDB = data.map(t => {
         return {
