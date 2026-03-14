@@ -22,6 +22,7 @@ const API = {
   rooms: "/api/settings/rooms",
   teachers: "/api/settings/teachers",
   academicPeriod: "/api/settings/academic-period/current",
+  schoolHoursActive: "/api/settings/school-hours/active",
 };
 
 const token = localStorage.getItem("token");

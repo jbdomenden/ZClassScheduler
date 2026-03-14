@@ -10,6 +10,7 @@
   teachers: "/api/settings/teachers",
   settingsCurriculums: "/api/settings/curriculums",
   academicPeriod: "/api/settings/academic-period/current",
+  schoolHoursActive: "/api/settings/school-hours/active",
 };
 
 const token = localStorage.getItem("token");

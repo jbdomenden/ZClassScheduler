@@ -4,7 +4,11 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
-import zeroday.Models.db.tables.*
+import zeroday.Models.db.tables.AcademicBreaks
+import zeroday.Models.db.tables.ActiveAcademicPeriod
+import zeroday.Models.db.tables.SchoolDayRules
+import zeroday.Models.db.tables.SchoolHoursSettings
+import zeroday.Models.db.tables.Schedules
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -14,8 +18,13 @@ object SchoolHoursRepository {
 
     @Serializable
     data class DayRuleDto(val dayOfWeek: String, val isOpen: Boolean, val timeStart: String, val timeEnd: String)
-
-    @Serializable
+    data class DayRuleViewDto(
+        val id: String,
+        val dayOfWeek: String,
+        val isOpen: Boolean,
+        val timeStart: String,
+        val timeEnd: String
+    )
     data class BreakDto(
         val id: String,
         val title: String,
@@ -26,23 +35,12 @@ object SchoolHoursRepository {
         val notes: String?
     )
 
-    @Serializable
     data class ActiveConfigDto(
         val id: String,
         val currentSchoolYear: String,
         val currentTerm: String,
-        val timezone: String,
-        val rules: List<ActiveRuleDto>,
+        val dayRules: List<DayRuleViewDto>,
         val breaks: List<BreakDto>
-    )
-
-    @Serializable
-    data class ActiveRuleDto(
-        val id: String,
-        val dayOfWeek: String,
-        val isOpen: Boolean,
-        val timeStart: String,
-        val timeEnd: String
     )
 
     fun getActivePeriod(): ActiveAcademicPeriod? = transaction {
@@ -61,12 +59,12 @@ object SchoolHoursRepository {
         val id = cfg[SchoolHoursSettings.id]
         val rules = SchoolDayRules.select { SchoolDayRules.schoolHoursSettingsId eq id }
             .map {
-                ActiveRuleDto(
+                DayRuleViewDto(
                     id = it[SchoolDayRules.id].toString(),
                     dayOfWeek = it[SchoolDayRules.dayOfWeek],
                     isOpen = it[SchoolDayRules.isOpen],
                     timeStart = it[SchoolDayRules.timeStart].toString(),
-                    timeEnd = it[SchoolDayRules.timeEnd].toString(),
+                    timeEnd = it[SchoolDayRules.timeEnd].toString()
                 )
             }
         val breaks = AcademicBreaks.select { (AcademicBreaks.schoolHoursSettingsId eq id) and (AcademicBreaks.isActive eq true) }
@@ -85,8 +83,7 @@ object SchoolHoursRepository {
             id = id.toString(),
             currentSchoolYear = cfg[SchoolHoursSettings.currentSchoolYear],
             currentTerm = cfg[SchoolHoursSettings.currentTerm],
-            timezone = cfg[SchoolHoursSettings.timezone],
-            rules = rules,
+            dayRules = rules,
             breaks = breaks,
         )
     }
@@ -94,7 +91,6 @@ object SchoolHoursRepository {
     fun upsertActive(
         schoolYear: String,
         term: String,
-        timezone: String,
         dayRules: List<DayRuleDto>,
         actor: String?
     ): UUID = transaction {
@@ -109,7 +105,7 @@ object SchoolHoursRepository {
                 it[SchoolHoursSettings.id] = id
                 it[currentSchoolYear] = schoolYear.trim()
                 it[currentTerm] = term.trim()
-                it[SchoolHoursSettings.timezone] = timezone.trim().ifBlank { "Asia/Manila" }
+                it[SchoolHoursSettings.timezone] = "Asia/Manila"
                 it[isActive] = true
                 it[effectiveFrom] = LocalDate.now()
                 it[createdBy] = actor
@@ -121,7 +117,7 @@ object SchoolHoursRepository {
             SchoolHoursSettings.update({ SchoolHoursSettings.id eq id }) {
                 it[currentSchoolYear] = schoolYear.trim()
                 it[currentTerm] = term.trim()
-                it[SchoolHoursSettings.timezone] = timezone.trim().ifBlank { "Asia/Manila" }
+                it[SchoolHoursSettings.timezone] = "Asia/Manila"
                 it[updatedBy] = actor
                 it[updatedAt] = now
             }
@@ -142,7 +138,30 @@ object SchoolHoursRepository {
             }
         }
 
+        backfillLegacySchedules(fallbackTerm = term)
+
         id
+    }
+
+
+    private fun backfillLegacySchedules(defaultSchoolYear: String = "2025-2026", fallbackTerm: String) {
+        val termFallback = fallbackTerm.trim().ifBlank { "1" }
+
+        Schedules
+            .select { Schedules.schoolYear eq "" }
+            .forEach { row ->
+                val id = row[Schedules.id]
+                val inferredAcademicTerm = when (row[Schedules.term]) {
+                    1 -> "1"
+                    2 -> "2"
+                    else -> termFallback
+                }
+
+                Schedules.update({ Schedules.id eq id }) {
+                    it[schoolYear] = defaultSchoolYear
+                    it[academicTerm] = inferredAcademicTerm
+                }
+            }
     }
 
     fun addBreak(

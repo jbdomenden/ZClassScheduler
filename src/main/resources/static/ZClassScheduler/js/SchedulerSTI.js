@@ -19,6 +19,7 @@ const API = {
     teachers: "/api/settings/teachers",
     curriculums: "/api/settings/curriculums",
     academicPeriod: "/api/settings/academic-period/current",
+    schoolHoursActive: "/api/settings/school-hours/active",
 };
 
 const token = localStorage.getItem("token");
@@ -1285,7 +1286,7 @@ addBlockBtn.addEventListener("click", async () => {
 (async function init() {
     ensureAddRowStyles();
     await loadSearchComponent();
-    await Promise.all([loadRoomsTeachers(), loadCurriculums(), loadActiveAcademicPeriod()]);
+    await Promise.all([loadRoomsTeachers(), loadCurriculums(), loadActiveAcademicPeriod(), loadSchoolHoursConfig()]);
     initHeaderSort();
     await loadBlocks();
 
