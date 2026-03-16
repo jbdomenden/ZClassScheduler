@@ -414,7 +414,7 @@
     }
 
     const HELP_TOURS = {
-        "ManageTeacher.html": [
+        "ManageUser.html": [
             { title: "Welcome", text: "This page lets you create and manage user accounts.\nWe will walk through search, add user, and edit user.", selector: ".page-header" },
             { title: "Search users", text: "Type a name, email, department, or role to filter the table.", selector: "#searchInput", demo: { actions: [{ type: "type", selector: "#searchInput", value: "john", ms: 700 }] } },
             { title: "Add user", text: "Click + Add User to open the Add User modal.", selector: "#addTeacherBtn", demo: { actions: [{ type: "click", selector: "#addTeacherBtn", real: true, ms: 300 }] } },
@@ -1438,7 +1438,7 @@
         { file: "SchedulerSHS.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
 
         // Settings pages
-        { file: "ManageTeacher.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
+        { file: "ManageUser.html", allow: ["ADMIN", "SUPER_ADMIN", "ACADEMIC_HEAD", "PROGRAM_HEAD", "SCHEDULER", "ASSISTANT_PRINCIPAL"] },
         { file: "ManageSchoolHours.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "ManageRoom.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },
         { file: "ManageCurriculum.html", allow: ["SUPER_ADMIN", "ACADEMIC_HEAD"] },

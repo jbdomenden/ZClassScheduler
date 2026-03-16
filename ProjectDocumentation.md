@@ -171,8 +171,8 @@ These pages manage core reference data. They use `/api/settings/*` endpoints.
   - API: `/api/settings/rooms`
 
 - Manage Teachers:
-  - Page: `ManageTeacher.html`
-  - JS: `ManageTeacher.js`
+  - Page: `ManageUser.html`
+  - JS: `ManageUser.js`
   - API: `/api/settings/teachers`
 
 - Manage Courses:
