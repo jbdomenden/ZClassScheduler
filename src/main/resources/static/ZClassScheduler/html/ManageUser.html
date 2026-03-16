@@ -34,7 +34,7 @@
     <!-- Main panel: search + action button + teacher list table -->
     <section class="panel">
       <div class="panel-header">
-        <!-- Search UI is injected dynamically (typically by ManageTeacher.js) -->
+        <!-- Search UI is injected dynamically (typically by ManageUser.js) -->
         <div id="searchContainer"></div>
 
         <!-- Primary action: open modal to add a teacher -->
@@ -55,7 +55,7 @@
            </tr>
            </thead>
 
-          <!-- IMPORTANT: Rows are rendered dynamically via ManageTeacher.js -->
+          <!-- IMPORTANT: Rows are rendered dynamically via ManageUser.js -->
           <tbody></tbody>
         </table>
       </div>
@@ -63,7 +63,7 @@
   </main>
 </div>
 
-<!-- Teacher modal (hidden by default; visibility controlled by ManageTeacher.js) -->
+<!-- Teacher modal (hidden by default; visibility controlled by ManageUser.js) -->
 <!-- IMPORTANT: "hidden" class toggles display without removing the modal from the DOM -->
 <div id="teacherModal" class="modal hidden">
   <div class="modal-content">
@@ -211,6 +211,6 @@
 <script src="/ZClassScheduler/js/GlobalSidebar.js"></script>
 
 <!-- Page module: teacher CRUD logic, table rendering, modal control -->
-<script type="module" src="/ZClassScheduler/js/ManageTeacher.js"></script>
+<script type="module" src="/ZClassScheduler/js/ManageUser.js"></script>
 </body>
 </html>
