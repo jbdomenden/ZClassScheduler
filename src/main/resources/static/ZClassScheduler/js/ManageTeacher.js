@@ -69,8 +69,7 @@ function isStaffAdmin() {
 }
 
 function isVisibleInUserManagementTable(teacher) {
-    const email = String(teacher?.email || "").trim().toLowerCase();
-    return email !== "admin@zcs.edu";
+    return normalizeRole(teacher?.firstname) !== "sample";
 }
 
 function canManageUser(targetTeacher) {
