@@ -39,7 +39,7 @@ function normalizeRole(roleRaw) {
     if (r === "scheduler") return "SCHEDULER";
     if (r === "assistant_principal" || r === "assistant principal") return "ASSISTANT_PRINCIPAL";
     if (r === "checker") return "CHECKER";
-    if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching" || r === "staff") return "NON_TEACHING";
+    if (r === "non_teaching" || r === "non-teaching" || r === "non teaching" || r === "nonteaching" || r === "staff") return "STAFF";
     if (r === "teacher") return "TEACHER";
     return String(roleRaw || "").trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_") || "TEACHER";
 }
@@ -67,12 +67,6 @@ function roleRankOf(roleRaw) {
 function isStaffAdmin() {
     return CURRENT_USER.role === "ADMIN" && CURRENT_USER.depts && CURRENT_USER.depts.has("NON_TEACHING");
 }
-
-
-function isVisibleInUserManagementTable(teacher) {
-    return normalizeRole(teacher?.firstname) !== "sample";
-}
-
 
 function isVisibleInUserManagementTable(teacher) {
     const email = String(teacher?.email || "").trim().toLowerCase();
@@ -254,11 +248,45 @@ function extractTeacherArray(payload) {
     if (Array.isArray(payload)) return payload;
     if (!payload || typeof payload !== "object") return [];
 
-    const candidates = [payload.items, payload.data, payload.teachers, payload.results, payload.rows];
+    const candidates = [payload.items, payload.data, payload.users, payload.teachers, payload.results, payload.rows, payload.list];
     for (const c of candidates) {
         if (Array.isArray(c)) return c;
     }
     return [];
+}
+
+function teacherField(t, ...keys) {
+    for (const k of keys) {
+        const v = t?.[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+    }
+    return "";
+}
+
+function normalizeTeacherRecord(t) {
+    const firstName = String(teacherField(t, "firstName", "firstname", "first_name")).trim();
+    const lastName = String(teacherField(t, "lastName", "lastname", "last_name")).trim();
+    const fullName = String(teacherField(t, "name", "fullName", "full_name")).trim();
+
+    let resolvedFirst = firstName;
+    let resolvedLast = lastName;
+
+    if ((!resolvedFirst || !resolvedLast) && fullName) {
+        const parts = fullName.split(/\s+/).filter(Boolean);
+        if (!resolvedFirst) resolvedFirst = parts.shift() || "";
+        if (!resolvedLast) resolvedLast = parts.join(" ") || resolvedFirst;
+    }
+
+    return {
+        id: teacherField(t, "id", "teacherId", "teacher_id"),
+        empId: teacherField(t, "empId", "emp_id"),
+        firstName: resolvedFirst,
+        lastName: resolvedLast,
+        department: String(teacherField(t, "department", "dept", "type")).trim(),
+        email: String(teacherField(t, "email", "mail", "userEmail", "user_email")).trim(),
+        role: normalizeRole(teacherField(t, "role", "userRole", "user_role") || "TEACHER"),
+        status: String(teacherField(t, "status", "active") || "Active").trim(),
+    };
 }
 
 async function fetchTeachers() {
@@ -275,18 +303,7 @@ async function fetchTeachers() {
     const payload = await res.json().catch(() => null);
     const data = extractTeacherArray(payload);
 
-    teacherDB = data.map(t => {
-        return {
-            id: t.id,
-            empId: t.empId || "",
-            firstName: t.firstName,
-            lastName: t.lastName,
-            department: t.department,
-            email: t.email,
-            role: t.role || "TEACHER",
-            status: t.status || "Active",
-        };
-    });
+    teacherDB = data.map(normalizeTeacherRecord);
 
     // Resolve current user's department (for Admin Time visibility).
     // If Super Admin, dept is not needed.
