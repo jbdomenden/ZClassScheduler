@@ -51,7 +51,7 @@
              <th data-key="email">Email<span class="sort-icon"></span></th>
              <th data-key="role">Role<span class="sort-icon"></span></th>
              <th data-key="status">Status<span class="sort-icon"></span></th>
-             <th width="240">Actions</th>
+             <th style="width: 240px;">Actions</th>
            </tr>
            </thead>
 
@@ -72,13 +72,13 @@
 
     <!-- Teacher form: used for both add and edit flows -->
     <form id="teacherForm">
-      <label>First Name</label>
+      <label for="empFn">First Name</label>
       <input type="text" id="empFn" required />
 
-      <label>Last Name</label>
+      <label for="empLn">Last Name</label>
       <input type="text" id="empLn" required />
 
-      <label>Department</label>
+      <label for="type">Department</label>
       <!-- NOTE: id="type" is used by existing JS; kept unchanged -->
       <select id="type" required>
         <option value="" disabled selected>Select Department</option>
@@ -101,10 +101,10 @@
         <div id="deptMulti" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
       </div>
 
-      <label>Email</label>
+      <label for="email">Email</label>
       <input type="email" id="email" required />
 
-      <label>Role</label>
+      <label for="role">Role</label>
       <select id="role" required>
         <option value="" disabled selected>Select Role</option>
         <option value="TEACHER">Teacher</option>
@@ -118,7 +118,7 @@
         <option value="SUPER_ADMIN">Super Admin</option>
       </select>
 
-      <label>Status</label>
+      <label for="status">Status</label>
       <select id="status">
         <option value="Active">Active</option>
         <option value="Inactive">Inactive</option>
@@ -158,19 +158,19 @@
     <div id="adminSelectionBar" class="is-hidden" style="margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#f8fafc;">
       <div class="form-row" style="margin:0;">
         <div class="form-field">
-          <label>Day</label>
+          <label for="adminSelDay">Day</label>
           <input id="adminSelDay" type="text" readonly />
         </div>
         <div class="form-field">
-          <label>Start</label>
+          <label for="adminSelStart">Start</label>
           <input id="adminSelStart" type="text" readonly />
         </div>
         <div class="form-field">
-          <label>End</label>
+          <label for="adminSelEnd">End</label>
           <select id="adminSelEnd"></select>
         </div>
         <div class="form-field">
-          <label>Type</label>
+          <label for="adminSelType">Type</label>
           <select id="adminSelType">
             <option value="ADMIN">ADMIN</option>
             <option value="BREAK">BREAK</option>
