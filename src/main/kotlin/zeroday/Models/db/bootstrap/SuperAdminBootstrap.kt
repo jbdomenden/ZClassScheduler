@@ -19,7 +19,7 @@ object SuperAdminBootstrap {
 
         val email = "admin@zcs.edu"
         val superAdminRole = "SUPER_ADMIN"
-        val allDepartments = "ICT,THM,BM,GE,ME,MT,NA,HS,STAFF"
+        val allDepartments = "ICT"
 
         // 1) Ensure login user exists and has SUPER_ADMIN role
         val existing = userRepository.findByEmail(email)
